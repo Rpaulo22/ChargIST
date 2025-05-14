@@ -76,14 +76,20 @@ fun AppNavigation() {
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginClick = { userId ->
-                    navController.navigate(Screen.Home.route)
+                    navController.navigate(Screen.Home.createRoute(userId))
                 }
             )
         }
         composable(
-            route = Screen.Home.route
-        ) {
+            route = Screen.Home.route,
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: -1
             HomeScreen(
+                userId = userId.toString(),
+                onLogoutClick = {
+                    navController.popBackStack()
+                }
             )
         }
     }

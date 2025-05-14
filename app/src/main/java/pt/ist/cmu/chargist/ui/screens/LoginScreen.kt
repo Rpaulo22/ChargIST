@@ -32,9 +32,9 @@ import pt.ist.cmu.chargist.appColor
 
 @Composable
 fun LoginScreen(
-    onLoginClick: (Int) -> Unit
+    onLoginClick: (String) -> Unit
 ) {
-    var userId = 1
+    var userId = "abcd1234"
     var user by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
