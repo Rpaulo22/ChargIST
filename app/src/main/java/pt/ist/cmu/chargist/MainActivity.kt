@@ -22,6 +22,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,8 +39,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import coil.compose.AsyncImage
+import pt.ist.cmu.chargist.ui.screens.HomeScreen
+import pt.ist.cmu.chargist.ui.screens.LoginScreen
 import pt.ist.cmu.chargist.ui.theme.ChargISTTheme
+import kotlin.collections.listOf
 
 val appColor = Color.hsv(150f, 0.79f, 0.62f)
 
@@ -49,10 +58,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ChargISTTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    HomePage(
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                Surface() {
+                    AppNavigation()
                 }
             }
         }
@@ -60,55 +67,30 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun HomePage(modifier: Modifier = Modifier) {
-    var user by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-
-
-    Column (
-        modifier = modifier.fillMaxHeight().fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+fun AppNavigation() {
+    val navController = rememberNavController()
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Login.route
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.chargist),
-            contentDescription = "logo"
-        )
-
-        Text(
-            text = "Welcome to ChargIST",
-            fontSize = 30.sp
-        )
-        Spacer(modifier = Modifier.size(20.dp))
-        OutlinedTextField(
-            value = user,
-            onValueChange = {user = it},
-            label = {Text("Username")},
-        )
-        Spacer(modifier = Modifier.size(10.dp))
-        OutlinedTextField(
-            value = password,
-            onValueChange = {password = it},
-            label = {Text("Password")},
-        )
-        Spacer(modifier = Modifier.size(10.dp))
-        OutlinedButton(
-            onClick = {},
-            colors = ButtonColors(Color.Transparent, appColor, Color.Transparent, Color.LightGray),
-            shape = RoundedCornerShape(6.dp),
-            border = BorderStroke(2.dp, appColor)
-        ) { Text("Login") }
-        Spacer(Modifier.size(5.dp))
-        TextButton(
-            onClick = {Log.d("HomePage","User: $user and password: $password")}, // log for user credentials
-        ) { Text("Create Account") }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun HomePagePreview() {
-    ChargISTTheme {
-        HomePage()
+        composable(Screen.Login.route) {
+            LoginScreen(
+                onLoginClick = { userId ->
+                    navController.navigate(Screen.Home.createRoute(userId))
+                }
+            )
+        }
+        composable(
+            route = Screen.Home.route,
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: -1
+            HomeScreen(
+                userId = userId.toString(),
+                onLogoutClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
     }
 }
