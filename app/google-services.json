@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "811731737673",
+    "firebase_url": "https://chargist-b6752-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "chargist-b6752",
+    "storage_bucket": "chargist-b6752.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:811731737673:android:36a2748cf3879ba515b398",
+        "android_client_info": {
+          "package_name": "pt.ist.cmu.chargist"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGN9UgTl0ZDAsIeILBtg1jjZX4PABxd3M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

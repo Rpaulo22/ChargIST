@@ -2,7 +2,7 @@ package pt.ist.cmu.chargist.model.data
 
 data class Charger(val id:String,
                    val name: String,
-                   var chargingSpots: List<ChargingSpot>,
+                   var chargingSpots: List<String>,
                    var creditCard: Boolean = false,
                    var money: Boolean = false,
                    var mbWay: Boolean = false,
