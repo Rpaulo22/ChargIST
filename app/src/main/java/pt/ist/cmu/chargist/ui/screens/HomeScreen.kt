@@ -33,7 +33,9 @@ import androidx.compose.runtime.getValue
 fun HomeScreen(userId: String, onLogoutClick: () -> Unit, viewModel: AppViewModel = viewModel()) {
 
     val chargers by viewModel.allChargers.collectAsState()
-    //viewModel.updateChargers()
+    val spots by viewModel.allChargingSpots.collectAsState()
+    viewModel.updateChargers()
+    viewModel.updateSpots()
 
     Scaffold (
         bottomBar = {
@@ -59,6 +61,12 @@ fun HomeScreen(userId: String, onLogoutClick: () -> Unit, viewModel: AppViewMode
             for (charger in chargers) {
                 item {
                     Text(text = "charger: $charger")
+                }
+            }
+
+            for (spot in spots) {
+                item {
+                    Text(text = "spot: $spot")
                 }
             }
         }

@@ -10,6 +10,10 @@ class ChargerRepository(private val chargerDao: ChargerDao) {
         chargerDao.insertCharger(charger)
     }
 
+    suspend fun update(charger: Charger) {
+        chargerDao.updateCharger(charger)
+    }
+
     suspend fun delete(charger: Charger) {
         chargerDao.deleteCharger(charger)
     }

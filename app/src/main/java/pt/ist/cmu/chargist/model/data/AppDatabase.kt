@@ -6,10 +6,11 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [Charger::class], version = 1, exportSchema = false)
+@Database(entities = [Charger::class, ChargingSpot::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun chargerDao(): ChargerDao
+    abstract fun chargingSpotDao(): ChargingSpotDao
 
     companion object {
         @Volatile
@@ -20,7 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "Charger_database"
+                    "ChargIST_database"
                 ).build()
                 INSTANCE = instance
                 instance

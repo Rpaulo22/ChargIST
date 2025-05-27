@@ -9,16 +9,16 @@ import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface ChargerDao {
-    @Query("SELECT * FROM charger ORDER BY id DESC")
-    fun getAllChargers(): Flow<List<Charger>>
+interface ChargingSpotDao {
+    @Query("SELECT * FROM charging_spot ORDER BY id DESC")
+    fun getAllChargingSpots(): Flow<List<ChargingSpot>>
 
     @Insert(onConflict = REPLACE)
-    suspend fun insertCharger(charger: Charger)
+    suspend fun insertChargingSpot(chargingSpot: ChargingSpot)
 
     @Update
-    suspend fun updateCharger(charger: Charger)
+    suspend fun updateChargingSpot(chargingSpot: ChargingSpot)
 
     @Delete
-    suspend fun deleteCharger(charger: Charger)
+    suspend fun deleteChargingSpot(chargingSpot: ChargingSpot)
 }

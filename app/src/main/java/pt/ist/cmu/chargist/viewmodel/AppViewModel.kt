@@ -15,16 +15,27 @@ import kotlinx.coroutines.launch
 import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargerRepository
+import pt.ist.cmu.chargist.model.data.ChargingSpot
+import pt.ist.cmu.chargist.model.data.ChargingSpotRepository
 
 class AppViewModel(application: Application) : AndroidViewModel(application)  {
-    private val repository: ChargerRepository
+    private val chargerRepository: ChargerRepository
+    private val spotRepository: ChargingSpotRepository
     val allChargers: StateFlow<List<Charger>>
+    val allChargingSpots: StateFlow<List<ChargingSpot>>
 
 
     init {
         val chargerDao = AppDatabase.getDatabase(application).chargerDao()
-        repository = ChargerRepository(chargerDao)
-        allChargers = repository.allChargers.stateIn(
+        val chargingSpotDao = AppDatabase.getDatabase(application).chargingSpotDao()
+        chargerRepository = ChargerRepository(chargerDao)
+        spotRepository = ChargingSpotRepository(chargingSpotDao)
+        allChargers = chargerRepository.allChargers.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptyList()
+        )
+        allChargingSpots = spotRepository.allChargingSpots.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             emptyList()
@@ -32,7 +43,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
     }
 
     fun createCharger() {
-        // TODO IMPLEMENT
+        // IMPLEMENT
+    }
+
+    fun updateSpots() {
+        val db = Firebase.firestore
+
+        db.collection("ChargingSpot")
+            .get()
+            .addOnSuccessListener { result ->
+                for (document in result) {
+                    val spot = ChargingSpot(
+                        id = document.id,
+                        speed = document.data["speed"] as String,
+                        type = document.data["type"] as String
+                    )
+                    Log.d("Firebase", "id: ${document.id} | ${document.data}")
+                    viewModelScope.launch {
+                        spotRepository.insert(spot)
+                    }
+                }
+            }
+            .addOnFailureListener { exception ->
+                Log.w("Firebase", "Error getting documents.", exception)
+            }
     }
 
     fun updateChargers() {
@@ -43,7 +77,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             .addOnSuccessListener { result ->
                 for (document in result) {
                     val coords = document.data["location"] as GeoPoint
-                    val prices = document.data["price"] as Map<*,*>
+                    val prices = document.data["price"] as Map<String, Number>
                     val charger = Charger(
                         id = document.id,
                         name = document.data["name"].toString(),
@@ -53,13 +87,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                         mbWay = document.data["mbWay"] as Boolean,
                         latitude = coords.latitude,
                         longitude = coords.longitude,
-                        priceFast = prices["fast"] as Double,
-                        priceMedium = prices["medium"] as Double,
-                        priceSlow = prices["slow"] as Double
+                        priceFast = prices["fast"]?.toDouble() ?: -1.0,
+                        priceMedium = prices["medium"]?.toDouble() ?: -1.0,
+                        priceSlow = prices["slow"]?.toDouble() ?: -1.0
                     )
+
                     Log.d("Firebase", "id: ${document.id} | ${document.data}")
                     viewModelScope.launch {
-                        repository.insert(charger) // TODO verify if charger in repository first
+                        chargerRepository.insert(charger)
                     }
                 }
             }
@@ -71,7 +106,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     fun deleteCharger(charger: Charger) {
         viewModelScope.launch {
-            repository.delete(charger)
+            chargerRepository.delete(charger)
         }
     }
 }
