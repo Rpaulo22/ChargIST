@@ -20,13 +20,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
     private val repository: ChargerRepository
     val allChargers: StateFlow<List<Charger>>
 
-    /*
-    private val _noteTitle = MutableStateFlow("")
-    val noteTitle: StateFlow<String> = _noteTitle
-
-    private val _noteContent = MutableStateFlow("")
-    val noteContent: StateFlow<String> = _noteContent
-    */
 
     init {
         val chargerDao = AppDatabase.getDatabase(application).chargerDao()
