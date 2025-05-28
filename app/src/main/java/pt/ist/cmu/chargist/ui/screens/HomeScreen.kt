@@ -2,6 +2,7 @@ package pt.ist.cmu.chargist.ui.screens
 
 import android.R.attr.navigationIcon
 import android.R.attr.text
+import android.location.Location
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,10 @@ import pt.ist.cmu.chargist.model.data.ChargingSpot
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import kotlin.reflect.typeOf
 import androidx.compose.runtime.getValue
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.LocationSource
+import com.google.android.gms.maps.LocationSource.OnLocationChangedListener
+import com.google.android.gms.maps.internal.ILocationSourceDelegate
 
 @Composable
 fun HomeScreen(userId: String, onLogoutClick: () -> Unit, viewModel: AppViewModel = viewModel()) {
@@ -57,10 +62,12 @@ fun HomeScreen(userId: String, onLogoutClick: () -> Unit, viewModel: AppViewMode
         }
     ) { paddingValues ->
         GoogleMap(
+            contentPadding = paddingValues,
             modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState)
+            cameraPositionState = cameraPositionState
+        )
 
-        LazyColumn(
+        /*LazyColumn(
             contentPadding = PaddingValues(
                 top = paddingValues.calculateTopPadding() + 16.dp,
                 bottom = paddingValues.calculateBottomPadding() + 16.dp,
@@ -81,6 +88,6 @@ fun HomeScreen(userId: String, onLogoutClick: () -> Unit, viewModel: AppViewMode
                     Text(text = "spot: $spot")
                 }
             }
-        }
+        }*/
     }
 }
