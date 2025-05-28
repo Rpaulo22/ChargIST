@@ -14,48 +14,32 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.Firebase
+import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.auth.User
 import com.google.firebase.firestore.firestore
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.rememberCameraPositionState
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargingSpot
+import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import kotlin.reflect.typeOf
+import androidx.compose.runtime.getValue
 
 @Composable
-fun HomeScreen(userId: String, onLogoutClick: () -> Unit) {
-    val db = Firebase.firestore
-    var chargers = mutableListOf<Charger>()
+fun HomeScreen(userId: String, onLogoutClick: () -> Unit, viewModel: AppViewModel = viewModel()) {
 
-    db.collection("Charger")
-        .get()
-        .addOnSuccessListener { result ->
-            for (document in result) {
-                val charger = Charger(
-                    id = document.id,
-                    name = document.data.get("name").toString(),
-                    chargingSpots = document.data.get("chargingSpots") as List<String>,
-                    creditCard = document.data.get("creditCard") as Boolean,
-                    money = document.data.get("money") as Boolean,
-                    mbWay = document.data.get("mbWay") as Boolean,
-                    latitude = 0.0,
-                    longitude = 0.0,
-                    priceFast = 0.0,
-                    priceMedium = 0.0,
-                    priceSlow = 0.0
-                )
-                chargers.add(charger)
-                Log.d("Firebase", "id: ${document.id} | ${(document.data.get("location"))}")
-            }
-        }
-        .addOnFailureListener { exception ->
-            Log.w("Firebase", "Error getting documents.", exception)
-        }
+    val chargers by viewModel.allChargers.collectAsState()
+    val spots by viewModel.allChargingSpots.collectAsState()
+    viewModel.updateChargers()
+    viewModel.updateSpots()
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(39.094661, -9.261128), 10f)
@@ -86,9 +70,16 @@ fun HomeScreen(userId: String, onLogoutClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                Text(text = "Home Screen")
-                Text(text = "User $userId")
+            for (charger in chargers) {
+                item {
+                    Text(text = "charger: $charger")
+                }
+            }
+
+            for (spot in spots) {
+                item {
+                    Text(text = "spot: $spot")
+                }
             }
         }
     }
