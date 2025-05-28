@@ -1,9 +1,17 @@
 package pt.ist.cmu.chargist.ui.screens
 
+import android.Manifest
 import android.R.attr.navigationIcon
 import android.R.attr.text
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
 import android.location.Location
+import android.os.Looper
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,9 +28,11 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheetDefaults.properties
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -42,10 +52,18 @@ import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import kotlin.reflect.typeOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.LocationSource
 import com.google.android.gms.maps.LocationSource.OnLocationChangedListener
 import com.google.android.gms.maps.internal.ILocationSourceDelegate
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.Marker
+import pt.ist.cmu.chargist.MainActivity
+import java.security.AccessController.getContext
 
 @Composable
 fun HomeScreen(
@@ -60,9 +78,28 @@ fun HomeScreen(
     viewModel.updateChargers()
     viewModel.updateSpots()
 
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(LatLng(39.094661, -9.261128), 10f)
-    }
+    val context = LocalContext.current
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions() ,
+        onResult = { permissions ->
+            if( permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+                &&
+                permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+            ) {
+                // Ok can access location
+                Toast.makeText(context, "Has Location Permission", Toast.LENGTH_SHORT).show()
+
+            } else {
+                // ask for permission
+                val rationaleRequired = ActivityCompat.shouldShowRequestPermissionRationale(
+                    context as MainActivity,
+                    Manifest.permission.ACCESS_FINE_LOCATION ) ||
+                        ActivityCompat.shouldShowRequestPermissionRationale(
+                            context,
+                            Manifest.permission.ACCESS_COARSE_LOCATION )
+            }
+        })
 
     Scaffold (
         bottomBar = {
@@ -78,7 +115,12 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
-                        onClick = { },
+                        onClick = { requestPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        ) },
                         modifier = Modifier.size(96.dp)
                     ) {
                         Column (
@@ -103,11 +145,7 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
-        GoogleMap(
-            contentPadding = paddingValues,
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState
-        )
+        Map(paddingValues, context)
 
         /*LazyColumn(
             contentPadding = PaddingValues(
@@ -132,4 +170,20 @@ fun HomeScreen(
             }
         }*/
     }
+}
+
+@Composable
+fun Map(
+    paddingValues: PaddingValues,
+    context : Context
+) {
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(LatLng(39.094661, -9.261128), 10f)
+    }
+
+    GoogleMap(
+        contentPadding = paddingValues,
+        modifier = Modifier.fillMaxSize(),
+        cameraPositionState = cameraPositionState,
+    )
 }
