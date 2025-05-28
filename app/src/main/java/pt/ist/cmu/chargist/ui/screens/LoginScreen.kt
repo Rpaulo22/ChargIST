@@ -1,16 +1,33 @@
 package pt.ist.cmu.chargist.ui.screens
 
+import android.R.attr.contentDescription
+import android.R.attr.visibility
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicSecureTextField
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.TextObfuscationMode
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -24,7 +41,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import pt.ist.cmu.chargist.R
@@ -37,7 +57,13 @@ fun LoginScreen(
     var userId = "abcd1234"
     var user by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-
+    val state = remember { TextFieldState() }
+    var showPassword by remember { mutableStateOf(false) }
+    val visualTransformation = if (showPassword) {
+        VisualTransformation.None
+    } else {
+        PasswordVisualTransformation()
+    }
 
     Column (
         modifier = Modifier.fillMaxHeight().fillMaxWidth(),
@@ -64,6 +90,20 @@ fun LoginScreen(
             value = password,
             onValueChange = {password = it},
             label = {Text("Password")},
+            visualTransformation = visualTransformation,
+            trailingIcon = {
+                IconButton(onClick = { showPassword = !showPassword }) {
+                    Icon(
+                        if (showPassword) {
+                            Icons.Default.Visibility
+                        }
+                        else {
+                            Icons.Default.VisibilityOff
+                        },
+                        contentDescription = "Toggle password visibility",
+                    )
+                }
+            }
         )
         Spacer(modifier = Modifier.size(10.dp))
         OutlinedButton(

@@ -94,6 +94,8 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
 
+    // Icons
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Maps
     implementation("com.google.maps.android:maps-compose:6.6.0")
