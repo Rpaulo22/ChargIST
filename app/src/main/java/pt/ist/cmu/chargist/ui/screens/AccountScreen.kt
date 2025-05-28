@@ -1,16 +1,17 @@
 package pt.ist.cmu.chargist.ui.screens
 
-import android.R.attr.navigationIcon
 import android.R.attr.text
-import android.location.Location
-import android.util.Log
+import android.R.attr.thickness
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -18,52 +19,28 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.firebase.Firebase
-import com.google.firebase.firestore.GeoPoint
-import com.google.firebase.firestore.auth.User
-import com.google.firebase.firestore.firestore
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.rememberCameraPositionState
-import pt.ist.cmu.chargist.model.data.Charger
-import pt.ist.cmu.chargist.model.data.ChargingSpot
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
-import kotlin.reflect.typeOf
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.LocationSource
-import com.google.android.gms.maps.LocationSource.OnLocationChangedListener
-import com.google.android.gms.maps.internal.ILocationSourceDelegate
 
 @Composable
-fun HomeScreen(
+fun AccountScreen(
     userId: String,
     onLogoutClick: () -> Unit,
-    onAccountClick: (String) -> Unit,
+    onHomeClick: (String) -> Unit,
     viewModel: AppViewModel = viewModel()
 ) {
-
-    val chargers by viewModel.allChargers.collectAsState()
-    val spots by viewModel.allChargingSpots.collectAsState()
-    viewModel.updateChargers()
-    viewModel.updateSpots()
-
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(LatLng(39.094661, -9.261128), 10f)
-    }
-
     Scaffold (
         bottomBar = {
             BottomAppBar(
@@ -78,7 +55,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
-                        onClick = { },
+                        onClick = { onHomeClick(userId) },
                         modifier = Modifier.size(96.dp)
                     ) {
                         Column (
@@ -89,7 +66,7 @@ fun HomeScreen(
                         }
                     }
                     IconButton(
-                        onClick = { onAccountClick(userId) },
+                        onClick = { },
                         modifier = Modifier.size(96.dp)
                     ) {
                         Column(
@@ -103,13 +80,7 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
-        GoogleMap(
-            contentPadding = paddingValues,
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState
-        )
-
-        /*LazyColumn(
+        LazyColumn(
             contentPadding = PaddingValues(
                 top = paddingValues.calculateTopPadding() + 16.dp,
                 bottom = paddingValues.calculateBottomPadding() + 16.dp,
@@ -117,19 +88,47 @@ fun HomeScreen(
                 end = 24.dp
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp)
         ) {
-            for (charger in chargers) {
-                item {
-                    Text(text = "charger: $charger")
-                }
-            }
+            item {
+                Text(text = "User $userId", fontSize = 24.sp)
 
-            for (spot in spots) {
-                item {
-                    Text(text = "spot: $spot")
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    Text(text = "Random Row 1")
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(thickness = 1.dp)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    Text(text = "Random Row 2")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(thickness = 1.dp)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onLogoutClick() }
+                ) {
+                    Text(text = "Logout")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
             }
-        }*/
+        }
     }
 }

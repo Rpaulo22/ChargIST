@@ -47,6 +47,7 @@ import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import pt.ist.cmu.chargist.ui.screens.HomeScreen
 import pt.ist.cmu.chargist.ui.screens.LoginScreen
+import pt.ist.cmu.chargist.ui.screens.AccountScreen
 import pt.ist.cmu.chargist.ui.theme.ChargISTTheme
 import kotlin.collections.listOf
 
@@ -88,7 +89,25 @@ fun AppNavigation() {
             HomeScreen(
                 userId = userId.toString(),
                 onLogoutClick = {
-                    navController.popBackStack()
+                    navController.navigate(Screen.Login.route)
+                },
+                onAccountClick = { userId ->
+                    navController.navigate(Screen.Account.createRoute(userId))
+                }
+            )
+        }
+        composable(
+            route = Screen.Account.route,
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: -1
+            AccountScreen(
+                userId = userId.toString(),
+                onLogoutClick = {
+                    navController.navigate(Screen.Login.route)
+                },
+                onHomeClick = { userId ->
+                    navController.navigate(Screen.Home.createRoute(userId))
                 }
             )
         }
