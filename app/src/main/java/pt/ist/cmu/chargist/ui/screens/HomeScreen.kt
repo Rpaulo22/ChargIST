@@ -16,9 +16,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.auth.User
 import com.google.firebase.firestore.firestore
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.rememberCameraPositionState
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargingSpot
 import kotlin.reflect.typeOf
@@ -53,6 +57,10 @@ fun HomeScreen(userId: String, onLogoutClick: () -> Unit) {
             Log.w("Firebase", "Error getting documents.", exception)
         }
 
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(LatLng(39.094661, -9.261128), 10f)
+    }
+
     Scaffold (
         bottomBar = {
             BottomAppBar {
@@ -64,6 +72,10 @@ fun HomeScreen(userId: String, onLogoutClick: () -> Unit) {
             }
         }
     ) { paddingValues ->
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState)
+
         LazyColumn(
             contentPadding = PaddingValues(
                 top = paddingValues.calculateTopPadding() + 16.dp,
