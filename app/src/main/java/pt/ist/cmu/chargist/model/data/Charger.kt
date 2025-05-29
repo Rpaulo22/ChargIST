@@ -9,7 +9,7 @@ data class Charger(
     val name: String,
     var chargingSpots: List<String> = mutableListOf<String>(),
     var creditCard: Boolean = false,
-    var money: Boolean = false,
+    var cash: Boolean = false,
     var mbWay: Boolean = false,
     val latitude: Double,
     val longitude: Double,

@@ -51,6 +51,7 @@ import pt.ist.cmu.chargist.model.data.ChargingSpot
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import kotlin.reflect.typeOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
@@ -62,6 +63,7 @@ import com.google.android.gms.maps.LocationSource.OnLocationChangedListener
 import com.google.android.gms.maps.internal.ILocationSourceDelegate
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
 import pt.ist.cmu.chargist.MainActivity
 import java.security.AccessController.getContext
 
@@ -75,8 +77,6 @@ fun HomeScreen(
 
     val chargers by viewModel.allChargers.collectAsState()
     val spots by viewModel.allChargingSpots.collectAsState()
-    viewModel.updateChargers()
-    viewModel.updateSpots()
 
     val context = LocalContext.current
 
@@ -145,7 +145,7 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
-        Map(paddingValues, context)
+        Map(paddingValues, context, viewModel)
 
         /*LazyColumn(
             contentPadding = PaddingValues(
@@ -175,8 +175,10 @@ fun HomeScreen(
 @Composable
 fun Map(
     paddingValues: PaddingValues,
-    context : Context
+    context : Context,
+    viewModel: AppViewModel
 ) {
+    val chargers by viewModel.allChargers.collectAsState()
     val istCoords = LatLng(38.736766738322125, -9.139350512479778)
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(istCoords, 17f)
@@ -186,5 +188,12 @@ fun Map(
         contentPadding = paddingValues,
         modifier = Modifier.fillMaxSize(),
         cameraPositionState = cameraPositionState,
-    )
+    ) {
+        for (charger in chargers) {
+            Marker(
+                state = remember { MarkerState(position=LatLng(charger.latitude,charger.longitude)) },
+                title = charger.name
+            )
+        }
+    }
 }
