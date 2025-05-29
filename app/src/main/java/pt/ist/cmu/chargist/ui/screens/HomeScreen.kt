@@ -179,7 +179,7 @@ fun Map(
 ) {
     val istCoords = LatLng(38.736766738322125, -9.139350512479778)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(istCoords, 21f)
+        position = CameraPosition.fromLatLngZoom(istCoords, 17f)
     }
 
     GoogleMap(
