@@ -89,7 +89,9 @@ fun AppNavigation() {
             HomeScreen(
                 userId = userId.toString(),
                 onLogoutClick = {
-                    navController.navigate(Screen.Login.route)
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
                 },
                 onAccountClick = { userId ->
                     navController.navigate(Screen.Account.createRoute(userId))
@@ -104,7 +106,9 @@ fun AppNavigation() {
             AccountScreen(
                 userId = userId.toString(),
                 onLogoutClick = {
-                    navController.navigate(Screen.Login.route)
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
                 },
                 onHomeClick = { userId ->
                     navController.navigate(Screen.Home.createRoute(userId))
