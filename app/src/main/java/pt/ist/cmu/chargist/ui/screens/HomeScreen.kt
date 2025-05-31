@@ -49,6 +49,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargingSpot
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
+import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import kotlin.reflect.typeOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -72,13 +73,17 @@ fun HomeScreen(
     userId: String,
     onLogoutClick: () -> Unit,
     onAccountClick: (String) -> Unit,
-    viewModel: AppViewModel = viewModel()
+    appViewModel: AppViewModel = viewModel(),
+    mapViewModel: MapViewModel = viewModel()
 ) {
 
-    val chargers by viewModel.allChargers.collectAsState()
-    val spots by viewModel.allChargingSpots.collectAsState()
+    val chargers by appViewModel.allChargers.collectAsState()
+    val spots by appViewModel.allChargingSpots.collectAsState()
 
     val context = LocalContext.current
+
+    val userLocation by mapViewModel.userLocation
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions() ,
@@ -89,17 +94,30 @@ fun HomeScreen(
             ) {
                 // Ok can access location
                 Toast.makeText(context, "Has Location Permission", Toast.LENGTH_SHORT).show()
+                mapViewModel.fetchUserLocation(context, fusedLocationClient)
 
             } else {
                 // ask for permission
-                val rationaleRequired = ActivityCompat.shouldShowRequestPermissionRationale(
-                    context as MainActivity,
-                    Manifest.permission.ACCESS_FINE_LOCATION ) ||
-                        ActivityCompat.shouldShowRequestPermissionRationale(
-                            context,
-                            Manifest.permission.ACCESS_COARSE_LOCATION )
+                context as MainActivity
+                val rationaleRequired =
+                    ActivityCompat.shouldShowRequestPermissionRationale(
+                        context,
+                        Manifest.permission.ACCESS_FINE_LOCATION )
+                            ||
+                    ActivityCompat.shouldShowRequestPermissionRationale(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION )
             }
         })
+
+    LaunchedEffect(Unit) {
+        requestPermissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        )
+    }
 
     Scaffold (
         bottomBar = {
@@ -145,7 +163,7 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
-        Map(paddingValues, context, viewModel)
+        Map(paddingValues, context, appViewModel, mapViewModel, userLocation)
 
         /*LazyColumn(
             contentPadding = PaddingValues(
@@ -176,9 +194,11 @@ fun HomeScreen(
 fun Map(
     paddingValues: PaddingValues,
     context : Context,
-    viewModel: AppViewModel
+    appViewModel: AppViewModel,
+    mapViewModel: MapViewModel,
+    userLocation: LatLng?
 ) {
-    val chargers by viewModel.allChargers.collectAsState()
+    val chargers by appViewModel.allChargers.collectAsState()
     val istCoords = LatLng(38.736766738322125, -9.139350512479778)
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(istCoords, 17f)
@@ -189,6 +209,17 @@ fun Map(
         modifier = Modifier.fillMaxSize(),
         cameraPositionState = cameraPositionState,
     ) {
+        // If the user's location is available, place a marker on the map
+        userLocation?.let {
+            Marker(
+                state = MarkerState(position = it), // Place the marker at the user's location
+                title = "Your Location", // Set the title for the marker
+                snippet = "This is where you are currently located." // Set the snippet for the marker
+            )
+            // Move the camera to the user's location with a zoom level of 10f
+            cameraPositionState.position = CameraPosition.fromLatLngZoom(it, 15f)
+        }
+
         for (charger in chargers) {
             Marker(
                 state = remember { MarkerState(position=LatLng(charger.latitude,charger.longitude)) },
