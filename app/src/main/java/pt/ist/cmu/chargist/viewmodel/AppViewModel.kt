@@ -2,8 +2,12 @@ package pt.ist.cmu.chargist.viewmodel
 
 import android.app.Application
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.tasks.Tasks.await
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.DocumentReference
@@ -47,6 +51,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     fun createCharger(name:String, spots:List<ChargingSpot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
                       lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double) {
+
+        return // todo evrything
 
         val data = hashMapOf(
             "name" to name,

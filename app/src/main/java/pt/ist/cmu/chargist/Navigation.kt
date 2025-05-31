@@ -10,4 +10,8 @@ sealed class Screen(val route: String) {
         fun createRoute(userId: String) = "account/$userId"
     }
     object Settings : Screen("settings")
+
+    object CreateCharger: Screen("createCharger") {
+        fun createRoute() = "createCharger"
+    }
 }

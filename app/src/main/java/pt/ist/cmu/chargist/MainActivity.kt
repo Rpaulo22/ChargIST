@@ -48,6 +48,7 @@ import coil.compose.AsyncImage
 import pt.ist.cmu.chargist.ui.screens.HomeScreen
 import pt.ist.cmu.chargist.ui.screens.LoginScreen
 import pt.ist.cmu.chargist.ui.screens.AccountScreen
+import pt.ist.cmu.chargist.ui.screens.CreateChargerForm
 import pt.ist.cmu.chargist.ui.theme.ChargISTTheme
 import kotlin.collections.listOf
 
@@ -95,7 +96,8 @@ fun AppNavigation() {
                 },
                 onAccountClick = { userId ->
                     navController.navigate(Screen.Account.createRoute(userId))
-                }
+                },
+                onCreateCharger = {navController.navigate(Screen.CreateCharger.createRoute())}
             )
         }
         composable(
@@ -114,6 +116,11 @@ fun AppNavigation() {
                     navController.navigate(Screen.Home.createRoute(userId))
                 }
             )
+        }
+
+        composable(Screen.CreateCharger.route) {
+            backStackEntry ->
+        CreateChargerForm()
         }
     }
 }
