@@ -52,13 +52,20 @@ import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import kotlin.reflect.typeOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.LocationSource
 import com.google.android.gms.maps.LocationSource.OnLocationChangedListener
 import com.google.android.gms.maps.internal.ILocationSourceDelegate
@@ -95,6 +102,7 @@ fun HomeScreen(
                 // Ok can access location
                 Toast.makeText(context, "Has Location Permission", Toast.LENGTH_SHORT).show()
                 mapViewModel.fetchUserLocation(context, fusedLocationClient)
+                mapViewModel.startLocationUpdates(context, fusedLocationClient)
 
             } else {
                 // ask for permission
@@ -196,35 +204,38 @@ fun Map(
     context : Context,
     appViewModel: AppViewModel,
     mapViewModel: MapViewModel,
-    userLocation: LatLng?
+    userLocation: LatLng?,
 ) {
+
     val chargers by appViewModel.allChargers.collectAsState()
     val istCoords = LatLng(38.736766738322125, -9.139350512479778)
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(istCoords, 17f)
-    }
+    val mapProperties by remember { mutableStateOf(MapProperties(isMyLocationEnabled = true)) }
 
-    GoogleMap(
-        contentPadding = paddingValues,
-        modifier = Modifier.fillMaxSize(),
-        cameraPositionState = cameraPositionState,
-    ) {
-        // If the user's location is available, place a marker on the map
-        userLocation?.let {
-            Marker(
-                state = MarkerState(position = it), // Place the marker at the user's location
-                title = "Your Location", // Set the title for the marker
-                snippet = "This is where you are currently located." // Set the snippet for the marker
-            )
-            // Move the camera to the user's location with a zoom level of 10f
-            cameraPositionState.position = CameraPosition.fromLatLngZoom(it, 15f)
+    if (userLocation != null) {
+        val cameraPositionState = rememberCameraPositionState {
+            position = CameraPosition.fromLatLngZoom(userLocation ?: istCoords, 15f)
         }
 
-        for (charger in chargers) {
-            Marker(
-                state = remember { MarkerState(position=LatLng(charger.latitude,charger.longitude)) },
-                title = charger.name
-            )
+        GoogleMap(
+            contentPadding = paddingValues,
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            properties = mapProperties,
+        ) {
+
+            for (charger in chargers) {
+                Marker(
+                    state = remember {
+                        MarkerState(
+                            position = LatLng(
+                                charger.latitude,
+                                charger.longitude
+                            )
+                        )
+                    },
+                    title = charger.name
+                )
+            }
         }
     }
 }
