@@ -211,7 +211,10 @@ fun Map(
     val istCoords = LatLng(38.736766738322125, -9.139350512479778)
     val mapProperties by remember { mutableStateOf(MapProperties(isMyLocationEnabled = true)) }
 
-    if (userLocation != null) {
+    Log.e("WTF", "User Location: " + userLocation)
+
+    // TODO: map doesn't work without location permissions right now
+    if (userLocation != null) { // wait until the application knows where the user is before rendering map
         val cameraPositionState = rememberCameraPositionState {
             position = CameraPosition.fromLatLngZoom(userLocation ?: istCoords, 15f)
         }
