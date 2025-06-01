@@ -234,36 +234,43 @@ fun Map(
 
     val chargers by appViewModel.allChargers.collectAsState()
     val istCoords = LatLng(38.736766738322125, -9.139350512479778)
-    val mapProperties by remember { mutableStateOf(MapProperties(isMyLocationEnabled = true)) }
+    var mapProperties by remember { mutableStateOf(MapProperties(isMyLocationEnabled = false)) }
+    var hasMovedCamera by remember { mutableStateOf(false) }
 
-    Log.e("WTF", "User Location: " + userLocation)
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(istCoords, 15f)
+    }
 
-    // TODO: map doesn't work without location permissions right now
-    if (userLocation != null) { // wait until the application knows where the user is before rendering map
-        val cameraPositionState = rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(userLocation ?: istCoords, 15f)
+    // If the app has location access, move the camera to user location
+    LaunchedEffect(userLocation) {
+        if (!hasMovedCamera && userLocation != null) {
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(userLocation, 15f)
+            )
+            mapProperties = mapProperties.copy(isMyLocationEnabled = true)
+            hasMovedCamera = true // only do this once so that the camera is not constantly following user
         }
+    }
 
-        GoogleMap(
-            contentPadding = paddingValues,
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            properties = mapProperties,
-        ) {
+    GoogleMap(
+        contentPadding = paddingValues,
+        modifier = Modifier.fillMaxSize(),
+        cameraPositionState = cameraPositionState,
+        properties = mapProperties,
+    ) {
 
-            for (charger in chargers) {
-                Marker(
-                    state = remember {
-                        MarkerState(
-                            position = LatLng(
-                                charger.latitude,
-                                charger.longitude
-                            )
+        for (charger in chargers) {
+            Marker(
+                state = remember {
+                    MarkerState(
+                        position = LatLng(
+                            charger.latitude,
+                            charger.longitude
                         )
-                    },
-                    title = charger.name
-                )
-            }
+                    )
+                },
+                title = charger.name
+            )
         }
     }
 }
