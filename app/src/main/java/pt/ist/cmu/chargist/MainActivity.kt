@@ -89,11 +89,6 @@ fun AppNavigation() {
             val userId = backStackEntry.arguments?.getString("userId") ?: -1
             HomeScreen(
                 userId = userId.toString(),
-                onLogoutClick = {
-                    navController.navigate("login") {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                    }
-                },
                 onAccountClick = { userId ->
                     navController.navigate(Screen.Account.createRoute(userId))
                 },
