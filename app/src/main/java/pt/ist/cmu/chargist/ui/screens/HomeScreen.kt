@@ -12,6 +12,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,6 +32,7 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.ModalBottomSheetDefaults.properties
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -81,6 +83,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.LocationSource
 import com.google.android.gms.maps.LocationSource.OnLocationChangedListener
 import com.google.android.gms.maps.internal.ILocationSourceDelegate
+import com.google.maps.android.compose.ComposeMapColorScheme
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
@@ -90,7 +93,6 @@ import java.security.AccessController.getContext
 @Composable
 fun HomeScreen(
     userId: String,
-    onLogoutClick: () -> Unit,
     onAccountClick: (String) -> Unit,
     onCreateCharger: () -> Unit,
     appViewModel: AppViewModel = viewModel(),
@@ -129,7 +131,8 @@ fun HomeScreen(
                         context,
                         Manifest.permission.ACCESS_COARSE_LOCATION )
             }
-        })
+        }
+    )
 
     LaunchedEffect(Unit) {
         requestPermissionLauncher.launch(
@@ -198,7 +201,7 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
-        Map(paddingValues, context, appViewModel, mapViewModel, userLocation)
+        Map(paddingValues, chargers, spots, userLocation)
 
         /*LazyColumn(
             contentPadding = PaddingValues(
@@ -228,44 +231,51 @@ fun HomeScreen(
 @Composable
 fun Map(
     paddingValues: PaddingValues,
-    context : Context,
-    appViewModel: AppViewModel,
-    mapViewModel: MapViewModel,
+    chargers: List<Charger>,
+    spots: List<ChargingSpot>,
     userLocation: LatLng?,
 ) {
 
-    val chargers by appViewModel.allChargers.collectAsState()
+    var mapProperties by remember { mutableStateOf(MapProperties(isMyLocationEnabled = false)) }
+    val colorScheme = ComposeMapColorScheme.FOLLOW_SYSTEM
+
     val istCoords = LatLng(38.736766738322125, -9.139350512479778)
-    val mapProperties by remember { mutableStateOf(MapProperties(isMyLocationEnabled = true)) }
+    var hasMovedCamera by remember { mutableStateOf(false) }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(istCoords, 15f)
+    }
 
-    Log.e("WTF", "User Location: " + userLocation)
-
-    // TODO: map doesn't work without location permissions right now
-    if (userLocation != null) { // wait until the application knows where the user is before rendering map
-        val cameraPositionState = rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(userLocation ?: istCoords, 15f)
+    // If the app has location access, move the camera to user location
+    LaunchedEffect(userLocation) {
+        if (!hasMovedCamera && userLocation != null) {
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(userLocation, 15f)
+            )
+            mapProperties = mapProperties.copy(isMyLocationEnabled = true)
+            hasMovedCamera = true // only do this once so that the camera is not constantly following user
         }
+    }
 
-        GoogleMap(
-            contentPadding = paddingValues,
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            properties = mapProperties,
-        ) {
+    GoogleMap(
+        contentPadding = paddingValues,
+        modifier = Modifier.fillMaxSize(),
+        cameraPositionState = cameraPositionState,
+        properties = mapProperties,
+        mapColorScheme = colorScheme,
+    ) {
 
-            for (charger in chargers) {
-                Marker(
-                    state = remember {
-                        MarkerState(
-                            position = LatLng(
-                                charger.latitude,
-                                charger.longitude
-                            )
+        for (charger in chargers) {
+            Marker(
+                state = remember {
+                    MarkerState(
+                        position = LatLng(
+                            charger.latitude,
+                            charger.longitude
                         )
-                    },
-                    title = charger.name
-                )
-            }
+                    )
+                },
+                title = charger.name
+            )
         }
     }
 }

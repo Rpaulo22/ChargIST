@@ -103,11 +103,6 @@ fun AppNavigation() {
 
             HomeScreen(
                 userId = userId.toString(),
-                onLogoutClick = {
-                    navController.navigate("login") {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                    }
-                },
                 onAccountClick = { userId ->
                     navController.navigate(Screen.Account.createRoute(userId))
                 },
