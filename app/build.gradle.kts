@@ -1,4 +1,17 @@
 import org.gradle.kotlin.dsl.implementation
+import java.util.Properties
+import java.io.FileInputStream
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        load(FileInputStream(file))
+    }
+}
+
+val MAPS_API_KEY = localProperties["MAPS_API_KEY"] as String? ?: ""
+
+android.buildFeatures.buildConfig = true
 
 plugins {
     alias(libs.plugins.android.application)
@@ -21,6 +34,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField("String", "MAPS_API_KEY", "\"$MAPS_API_KEY\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

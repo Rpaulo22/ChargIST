@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -50,6 +52,8 @@ import pt.ist.cmu.chargist.ui.screens.LoginScreen
 import pt.ist.cmu.chargist.ui.screens.AccountScreen
 import pt.ist.cmu.chargist.ui.screens.CreateChargerForm
 import pt.ist.cmu.chargist.ui.theme.ChargISTTheme
+import pt.ist.cmu.chargist.viewmodel.AppViewModel
+import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import kotlin.collections.listOf
 
 val appColor = Color.hsv(150f, 0.79f, 0.62f)
@@ -87,6 +91,16 @@ fun AppNavigation() {
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId") ?: -1
+
+            // Scope the ViewModel to the "home" route
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.Home.route)
+            }
+
+            // these are the shared view models
+            val appViewModel = viewModel<AppViewModel>(parentEntry)
+            val mapViewModel = viewModel<MapViewModel>(parentEntry)
+
             HomeScreen(
                 userId = userId.toString(),
                 onLogoutClick = {
@@ -97,7 +111,9 @@ fun AppNavigation() {
                 onAccountClick = { userId ->
                     navController.navigate(Screen.Account.createRoute(userId))
                 },
-                onCreateCharger = {navController.navigate(Screen.CreateCharger.createRoute())}
+                onCreateCharger = {navController.navigate(Screen.CreateCharger.createRoute())},
+                appViewModel = appViewModel,
+                mapViewModel = mapViewModel
             )
         }
         composable(
@@ -120,7 +136,16 @@ fun AppNavigation() {
 
         composable(Screen.CreateCharger.route) {
             backStackEntry ->
-        CreateChargerForm()
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.Home.route)
+            }
+            val appViewModel = viewModel<AppViewModel>(parentEntry)
+            val mapViewModel = viewModel<MapViewModel>(parentEntry)
+            CreateChargerForm(
+                appViewModel = appViewModel,
+                mapViewModel = mapViewModel,
+                onCreateClick = {navController.popBackStack()}
+            )
         }
     }
 }

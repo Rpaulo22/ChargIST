@@ -1,5 +1,6 @@
 package pt.ist.cmu.chargist.viewmodel
 
+import pt.ist.cmu.chargist.BuildConfig
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
@@ -14,16 +15,60 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
+import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
 
 class MapViewModel: ViewModel() {
 
     // State to hold the user's location as LatLng (latitude and longitude)
     private val _userLocation = mutableStateOf<LatLng?>(null)
     val userLocation: State<LatLng?> = _userLocation
+
+    var address by mutableStateOf("")
+
+    // Based on current location, uses google maps api to get the address
+    fun fetchAddress() {
+        val lat = userLocation.value?.latitude
+        val lng = userLocation.value?.longitude
+
+        // launch a coroutine to execute http request (http requests can't be executed on main thread)
+        viewModelScope.launch(Dispatchers.IO) {
+            val client = OkHttpClient()
+            val apiKey = BuildConfig.MAPS_API_KEY
+            val url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey"
+
+            try {
+                val request = Request.Builder().url(url).build()
+                val response = client.newCall(request).execute()
+
+                if (response.isSuccessful) {
+                    val json = JSONObject(response.body?.string() ?: "")
+                    val formattedAddress = json.getJSONArray("results")
+                        .getJSONObject(0)
+                        .getString("formatted_address")
+
+                    withContext(Dispatchers.Main) {
+                        address = formattedAddress
+                    }
+                } else {
+                    address = "unknown"
+                }
+            } catch (e: Exception) {
+                Log.e("Network", "Error: ${e.message}")
+                address = "error"
+            }
+        }
+    }
+
 
     // Function to fetch the user's location and update the state
     fun fetchUserLocation(context: Context, fusedLocationClient: FusedLocationProviderClient) {
