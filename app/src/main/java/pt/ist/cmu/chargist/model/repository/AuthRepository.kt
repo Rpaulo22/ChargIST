@@ -22,6 +22,7 @@ class AuthRepository (
 
     suspend fun signUp(email: String, password: String) {
         authData.linkAccount(email, password)
+        authData.createGuestAccount()
     }
 
     fun signOut() {

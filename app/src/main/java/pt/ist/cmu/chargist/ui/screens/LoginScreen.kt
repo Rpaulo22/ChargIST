@@ -3,6 +3,7 @@ package pt.ist.cmu.chargist.ui.screens
 import android.R.attr.contentDescription
 import android.R.attr.visibility
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -36,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -57,12 +60,13 @@ import pt.ist.cmu.chargist.viewmodel.LoginViewModel
 
 @Composable
 fun LoginScreen(
-    viewModel: LoginViewModel,
-    onLoginClick: (String) -> Unit,
-    onRegisterClick: () -> Unit,
+    loginViewModel: LoginViewModel,
+    goToHome: (String) -> Unit,
+    goToRegister: () -> Unit,
 ) {
-    var userId = "abcd1234"
-    var user by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    var userId = "abcd1234" // TODO: replace this with auth info (probably no longer needs to be passed around)
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val state = remember { TextFieldState() }
     var showPassword by remember { mutableStateOf(false) }
@@ -73,7 +77,15 @@ fun LoginScreen(
     }
 
     LaunchedEffect(true) {
-        viewModel.loadCurrentUser()
+        loginViewModel.loadCurrentUser()
+    }
+
+    val loginSuccess by loginViewModel.loginSuccess.collectAsState()
+    LaunchedEffect(loginSuccess) {
+        if (loginSuccess) {
+            Toast.makeText(context, "Logged in successfully", Toast.LENGTH_SHORT).show()
+            goToHome(userId)
+        }
     }
 
     Column (
@@ -92,9 +104,9 @@ fun LoginScreen(
         )
         Spacer(modifier = Modifier.size(20.dp))
         OutlinedTextField(
-            value = user,
-            onValueChange = {user = it},
-            label = {Text("Username")},
+            value = email,
+            onValueChange = {email = it},
+            label = {Text("Email")},
         )
         Spacer(modifier = Modifier.size(10.dp))
         OutlinedTextField(
@@ -119,14 +131,25 @@ fun LoginScreen(
         )
         Spacer(modifier = Modifier.size(20.dp))
         OutlinedButton(
-            onClick = {onLoginClick(userId)},
+            onClick = {
+                loginViewModel.signIn(
+                    email,
+                    password,
+                )
+            },
             colors = ButtonColors(Color.Transparent, appColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
             border = BorderStroke(2.dp, appColor)
         ) { Text("Login") }
+        OutlinedButton(
+            onClick = {goToHome(userId)},
+            colors = ButtonColors(Color.Transparent, appColor, Color.Transparent, Color.LightGray),
+            shape = RoundedCornerShape(6.dp),
+            border = BorderStroke(2.dp, appColor)
+        ) { Text("PLACEHOLDER: Login as Guest") }
         Spacer(Modifier.size(5.dp))
         TextButton(
-            onClick = {onRegisterClick()},
+            onClick = {goToRegister()},
         ) { Text("Create Account") }
     }
 }

@@ -110,10 +110,10 @@ fun AppNavigation() {
             val loginViewModel = viewModel<LoginViewModel>(backStackEntry)
             LoginScreen(
                 loginViewModel,
-                onLoginClick = { userId ->
+                goToHome = { userId ->
                     navController.navigate(Screen.Home.createRoute(userId))
                 },
-                onRegisterClick = {
+                goToRegister = {
                     navController.navigate(Screen.Register.createRoute())
                 },
             )

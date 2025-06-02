@@ -13,11 +13,10 @@ import pt.ist.cmu.chargist.model.repository.AuthRepository
 
 class RegisterViewModel () : ViewModel() {
     private val authRepository: AuthRepository
-    val auth: Auth
 
     init {
         val firebaseAuth = FirebaseAuth.getInstance()
-        auth = Auth(firebaseAuth)
+        val auth = Auth(firebaseAuth)
         authRepository = AuthRepository(auth)
     }
 
@@ -33,9 +32,6 @@ class RegisterViewModel () : ViewModel() {
         viewModelScope.launch {
             try {
                 // TODO: add proper sanitization and verification
-                if (auth.currentUser == null) {
-                    Log.e("RegisterViewModel", "Why is this null? :(")
-                }
                 authRepository.signUp(email, password)
                 _shouldRestartApp.value = true
             } catch (e: Exception) {
