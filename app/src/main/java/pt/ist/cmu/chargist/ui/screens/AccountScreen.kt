@@ -2,6 +2,7 @@ package pt.ist.cmu.chargist.ui.screens
 
 import android.R.attr.text
 import android.R.attr.thickness
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,19 +28,47 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import pt.ist.cmu.chargist.viewmodel.AccountViewModel
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 
 @Composable
 fun AccountScreen(
+    accountViewModel: AccountViewModel,
     userId: String,
-    onLogoutClick: () -> Unit,
-    onHomeClick: (String) -> Unit,
-    viewModel: AppViewModel = viewModel()
+    goToLoginScreen: () -> Unit,
+    goToHomeScreen: (String) -> Unit,
+    appViewModel: AppViewModel = viewModel()
+) {
+    val context = LocalContext.current
+    val shouldRestartApp by accountViewModel.shouldRestartApp.collectAsStateWithLifecycle()
+    if (shouldRestartApp) {
+        Toast.makeText(context, "Signed out successfully", Toast.LENGTH_SHORT).show()
+        goToLoginScreen()
+    } else {
+        AccountScreenContent(
+            userId = userId,
+            signOut = accountViewModel::signOut,
+            goToHomeScreen = goToHomeScreen,
+        )
+    }
+}
+
+@Composable
+fun AccountScreenContent (
+    userId: String,
+    signOut: () -> Unit,
+    goToHomeScreen: (String) -> Unit,
 ) {
     Scaffold (
         bottomBar = {
@@ -55,7 +84,7 @@ fun AccountScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
-                        onClick = { onHomeClick(userId) },
+                        onClick = { goToHomeScreen(userId) },
                         modifier = Modifier.size(96.dp)
                     ) {
                         Column (
@@ -122,7 +151,7 @@ fun AccountScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onLogoutClick() }
+                        .clickable { signOut() }
                 ) {
                     Text(text = "Logout")
                 }

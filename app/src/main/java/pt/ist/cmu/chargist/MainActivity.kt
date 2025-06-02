@@ -56,6 +56,7 @@ import pt.ist.cmu.chargist.ui.screens.AccountScreen
 import pt.ist.cmu.chargist.ui.screens.CreateChargerForm
 import pt.ist.cmu.chargist.ui.screens.RegisterScreen
 import pt.ist.cmu.chargist.ui.theme.ChargISTTheme
+import pt.ist.cmu.chargist.viewmodel.AccountViewModel
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import pt.ist.cmu.chargist.viewmodel.LoginViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
@@ -125,7 +126,7 @@ fun AppNavigation() {
 
             RegisterScreen(
                 registerViewModel = registerViewModel,
-                goToHomeScreen = {
+                goToLoginScreen = {
                     navController.navigate("login") {
                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
@@ -163,15 +164,17 @@ fun AppNavigation() {
             route = Screen.Account.route,
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStackEntry ->
+            val accountViewModel = viewModel<AccountViewModel>(backStackEntry)
             val userId = backStackEntry.arguments?.getString("userId") ?: -1
             AccountScreen(
+                accountViewModel = accountViewModel,
                 userId = userId.toString(),
-                onLogoutClick = {
+                goToLoginScreen = {
                     navController.navigate("login") {
                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
                 },
-                onHomeClick = { userId ->
+                goToHomeScreen = { userId ->
                     navController.navigate(Screen.Home.createRoute(userId))
                 }
             )
