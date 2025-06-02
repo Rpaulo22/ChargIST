@@ -47,6 +47,7 @@ fun AccountScreen(
     accountViewModel: AccountViewModel,
     userId: String,
     goToLoginScreen: () -> Unit,
+    goToRegisterScreen: () -> Unit,
     goToHomeScreen: (String) -> Unit,
     appViewModel: AppViewModel = viewModel()
 ) {
@@ -58,8 +59,10 @@ fun AccountScreen(
     } else {
         AccountScreenContent(
             userId = userId,
+            isGuest = accountViewModel::isGuest,
             signOut = accountViewModel::signOut,
             goToHomeScreen = goToHomeScreen,
+            goToRegisterScreen = goToRegisterScreen,
         )
     }
 }
@@ -67,7 +70,9 @@ fun AccountScreen(
 @Composable
 fun AccountScreenContent (
     userId: String,
+    isGuest: () -> Boolean,
     signOut: () -> Unit,
+    goToRegisterScreen: () -> Unit,
     goToHomeScreen: (String) -> Unit,
 ) {
     Scaffold (
@@ -122,6 +127,9 @@ fun AccountScreenContent (
                 .padding(8.dp)
         ) {
             item {
+                if (isGuest()) {
+                    Text(text = "You're a guest", fontSize = 24.sp)
+                }
                 Text(text = "User $userId", fontSize = 24.sp)
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -147,6 +155,32 @@ fun AccountScreenContent (
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider(thickness = 1.dp)
                 Spacer(modifier = Modifier.height(8.dp))
+
+                if (isGuest()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { }
+                    ) {
+                        Text(text = "Sign In")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { goToRegisterScreen() }
+                    ) {
+                        Text(text = "Sign Up")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
 
                 Row(
                     modifier = Modifier

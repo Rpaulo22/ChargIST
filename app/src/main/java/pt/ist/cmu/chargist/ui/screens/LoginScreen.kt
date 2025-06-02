@@ -61,8 +61,8 @@ import pt.ist.cmu.chargist.viewmodel.LoginViewModel
 @Composable
 fun LoginScreen(
     loginViewModel: LoginViewModel,
-    goToHome: (String) -> Unit,
-    goToRegister: () -> Unit,
+    goToHomeScreen: (String) -> Unit,
+    goToRegisterScreen: () -> Unit,
 ) {
     val context = LocalContext.current
     var userId = "abcd1234" // TODO: replace this with auth info (probably no longer needs to be passed around)
@@ -84,7 +84,7 @@ fun LoginScreen(
     LaunchedEffect(loginSuccess) {
         if (loginSuccess) {
             Toast.makeText(context, "Logged in successfully", Toast.LENGTH_SHORT).show()
-            goToHome(userId)
+            goToHomeScreen(userId)
         }
     }
 
@@ -142,14 +142,14 @@ fun LoginScreen(
             border = BorderStroke(2.dp, appColor)
         ) { Text("Login") }
         OutlinedButton(
-            onClick = {goToHome(userId)},
+            onClick = {goToHomeScreen(userId)},
             colors = ButtonColors(Color.Transparent, appColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
             border = BorderStroke(2.dp, appColor)
         ) { Text("PLACEHOLDER: Login as Guest") }
         Spacer(Modifier.size(5.dp))
         TextButton(
-            onClick = {goToRegister()},
+            onClick = {goToRegisterScreen()},
         ) { Text("Create Account") }
     }
 }

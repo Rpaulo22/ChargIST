@@ -24,6 +24,10 @@ class Auth @Inject constructor(private val auth: FirebaseAuth) {
         auth.signInAnonymously().await()
     }
 
+    fun isGuest(): Boolean {
+        return auth.currentUser?.isAnonymous == true
+    }
+
     suspend fun signIn(email: String, password: String) {
         auth.signInWithEmailAndPassword(email, password).await()
     }

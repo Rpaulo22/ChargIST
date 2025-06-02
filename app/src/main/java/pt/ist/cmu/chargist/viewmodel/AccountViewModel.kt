@@ -24,10 +24,17 @@ class AccountViewModel() : ViewModel() {
     val shouldRestartApp: StateFlow<Boolean>
         get() = _shouldRestartApp.asStateFlow()
 
+    fun isGuest() : Boolean {
+        return authRepository.isGuest()
+    }
+
     fun signOut() {
         viewModelScope.launch {
             try {
-                authRepository.signOut()
+                // if user is a guest, don't lose access to the guest account
+                if (!isGuest()) {
+                    authRepository.signOut()
+                }
                 _shouldRestartApp.value = true
             } catch (e: Exception) {
                 // TODO: handle

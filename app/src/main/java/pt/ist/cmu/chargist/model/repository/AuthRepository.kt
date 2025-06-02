@@ -16,6 +16,10 @@ class AuthRepository (
         authData.createGuestAccount()
     }
 
+    fun isGuest() : Boolean {
+        return authData.isGuest()
+    }
+
     suspend fun signIn(email: String, password: String) {
         authData.signIn(email, password)
     }

@@ -67,24 +67,13 @@ val appColor = Color.hsv(150f, 0.79f, 0.62f)
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var auth: FirebaseAuth
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Initialize Firebase Auth
-        auth = Firebase.auth
     }
 
     override fun onStart() {
         super.onStart()
         enableEdgeToEdge()
-
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            reload()
-        }
-
         setContent {
             ChargISTTheme {
                 Surface() {
@@ -111,10 +100,10 @@ fun AppNavigation() {
             val loginViewModel = viewModel<LoginViewModel>(backStackEntry)
             LoginScreen(
                 loginViewModel,
-                goToHome = { userId ->
+                goToHomeScreen = { userId ->
                     navController.navigate(Screen.Home.createRoute(userId))
                 },
-                goToRegister = {
+                goToRegisterScreen = {
                     navController.navigate(Screen.Register.createRoute())
                 },
             )
@@ -173,6 +162,9 @@ fun AppNavigation() {
                     navController.navigate("login") {
                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
+                },
+                goToRegisterScreen = {
+                    navController.navigate(Screen.Register.createRoute())
                 },
                 goToHomeScreen = { userId ->
                     navController.navigate(Screen.Home.createRoute(userId))
