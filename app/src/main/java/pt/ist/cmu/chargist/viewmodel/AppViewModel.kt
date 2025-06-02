@@ -19,9 +19,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Charger
-import pt.ist.cmu.chargist.model.data.ChargerRepository
+import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.data.ChargingSpot
-import pt.ist.cmu.chargist.model.data.ChargingSpotRepository
+import pt.ist.cmu.chargist.model.repository.ChargingSpotRepository
 
 class AppViewModel(application: Application) : AndroidViewModel(application)  {
     private val chargerRepository: ChargerRepository

@@ -47,21 +47,43 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import coil.compose.AsyncImage
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 import pt.ist.cmu.chargist.ui.screens.HomeScreen
 import pt.ist.cmu.chargist.ui.screens.LoginScreen
 import pt.ist.cmu.chargist.ui.screens.AccountScreen
 import pt.ist.cmu.chargist.ui.screens.CreateChargerForm
+import pt.ist.cmu.chargist.ui.screens.RegisterScreen
 import pt.ist.cmu.chargist.ui.theme.ChargISTTheme
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
+import pt.ist.cmu.chargist.viewmodel.LoginViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
+import pt.ist.cmu.chargist.viewmodel.RegisterViewModel
 import kotlin.collections.listOf
 
 val appColor = Color.hsv(150f, 0.79f, 0.62f)
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var auth: FirebaseAuth
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize Firebase Auth
+        auth = Firebase.auth
+    }
+
+    override fun onStart() {
+        super.onStart()
         enableEdgeToEdge()
+
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            reload()
+        }
+
         setContent {
             ChargISTTheme {
                 Surface() {
@@ -72,6 +94,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private fun reload() {
+}
+
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
@@ -79,10 +104,31 @@ fun AppNavigation() {
         navController = navController,
         startDestination = Screen.Login.route
     ) {
-        composable(Screen.Login.route) {
+        composable(
+            Screen.Login.route
+        ) { backStackEntry ->
+            val loginViewModel = viewModel<LoginViewModel>(backStackEntry)
             LoginScreen(
+                loginViewModel,
                 onLoginClick = { userId ->
                     navController.navigate(Screen.Home.createRoute(userId))
+                },
+                onRegisterClick = {
+                    navController.navigate(Screen.Register.createRoute())
+                },
+            )
+        }
+        composable(
+            route = Screen.Register.route
+        ) { backStackEntry ->
+            val registerViewModel = viewModel<RegisterViewModel>(backStackEntry)
+
+            RegisterScreen(
+                registerViewModel = registerViewModel,
+                goToHomeScreen = {
+                    navController.navigate("login") {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    }
                 }
             )
         }
@@ -106,7 +152,9 @@ fun AppNavigation() {
                 onAccountClick = { userId ->
                     navController.navigate(Screen.Account.createRoute(userId))
                 },
-                onCreateCharger = {navController.navigate(Screen.CreateCharger.createRoute())},
+                onCreateCharger = {
+                    navController.navigate(Screen.CreateCharger.createRoute())
+                },
                 appViewModel = appViewModel,
                 mapViewModel = mapViewModel
             )

@@ -1,7 +1,8 @@
-package pt.ist.cmu.chargist.model.data
+package pt.ist.cmu.chargist.model.repository
 
 import kotlinx.coroutines.flow.Flow
-
+import pt.ist.cmu.chargist.model.data.ChargingSpot
+import pt.ist.cmu.chargist.model.data.ChargingSpotDao
 
 class ChargingSpotRepository(private val chargingSpotDao: ChargingSpotDao) {
     val allChargingSpots: Flow<List<ChargingSpot>> = chargingSpotDao.getAllChargingSpots()
