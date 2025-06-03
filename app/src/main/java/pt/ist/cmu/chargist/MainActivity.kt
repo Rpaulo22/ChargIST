@@ -54,6 +54,7 @@ import pt.ist.cmu.chargist.ui.screens.HomeScreen
 import pt.ist.cmu.chargist.ui.screens.LoginScreen
 import pt.ist.cmu.chargist.ui.screens.AccountScreen
 import pt.ist.cmu.chargist.ui.screens.CreateChargerForm
+import pt.ist.cmu.chargist.ui.screens.CreateSpotForm
 import pt.ist.cmu.chargist.ui.screens.RegisterScreen
 import pt.ist.cmu.chargist.ui.theme.ChargISTTheme
 import pt.ist.cmu.chargist.viewmodel.AccountViewModel
@@ -182,6 +183,19 @@ fun AppNavigation() {
             CreateChargerForm(
                 appViewModel = appViewModel,
                 mapViewModel = mapViewModel,
+                onCreateClick = {navController.popBackStack()},
+                onAddSpotClick = {navController.navigate(Screen.CreateSpot.createRoute())}
+            )
+        }
+
+        composable(Screen.CreateSpot.route) {
+                backStackEntry ->
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.Home.route)
+            }
+            val appViewModel = viewModel<AppViewModel>(parentEntry)
+            CreateSpotForm(
+                appViewModel = appViewModel,
                 onCreateClick = {navController.popBackStack()}
             )
         }

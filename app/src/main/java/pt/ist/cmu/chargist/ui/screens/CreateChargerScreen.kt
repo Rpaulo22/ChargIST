@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -19,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -31,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -49,7 +53,8 @@ import java.util.Locale
 fun CreateChargerForm(
     appViewModel: AppViewModel = viewModel(),
     mapViewModel: MapViewModel = viewModel(),
-    onCreateClick: () -> Unit
+    onCreateClick: () -> Unit,
+    onAddSpotClick: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -85,7 +90,7 @@ fun CreateChargerForm(
         Spacer(Modifier.size(10.dp))
 
         Button(
-            onClick = { Toast.makeText(context, "HAHA querias", Toast.LENGTH_SHORT).show() }
+            onClick = { onAddSpotClick() }
         ) {
             Row (
                 verticalAlignment = Alignment.CenterVertically
@@ -172,5 +177,64 @@ fun CreateChargerForm(
                     Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
                 }
             }) { Text("Create new Charger") }
+    }
+}
+@Composable
+fun CreateSpotForm(
+    appViewModel: AppViewModel,
+    onCreateClick: () -> Unit
+) {
+    var speedOptions = listOf("Slow", "Medium", "Fast")
+    val (selectedSpeed, onSpeedSelected) = remember { mutableStateOf(speedOptions[0]) }
+
+    var typeOptions = listOf("CCS2", "Type 2")
+    val (selectedType, onTypeSelected) = remember { mutableStateOf(typeOptions[0]) }
+
+    Column() {
+        Row(
+            modifier = Modifier.selectableGroup()
+        ) {
+            speedOptions.forEach { speed ->
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .selectable(
+                            selected = (speed == selectedSpeed),
+                            onClick = {onSpeedSelected(speed)},
+                            role = Role.RadioButton),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = speed
+                    )
+                    RadioButton(
+                        selected = (speed == selectedSpeed),
+                        onClick = null
+                    )
+                }
+            }
+        }
+        Row(
+            modifier = Modifier.selectableGroup()
+        ) {
+            typeOptions.forEach { type ->
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .selectable(
+                            selected = (type == selectedType),
+                            onClick = {onTypeSelected(type)},
+                            role = Role.RadioButton),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = type
+                    )
+                    RadioButton(
+                        selected = (type == selectedType),
+                        onClick = null
+                    )
+                }
+            }
+        }
+        Button(onClick = {onCreateClick()}) {Text("Add charging spot")}
     }
 }
