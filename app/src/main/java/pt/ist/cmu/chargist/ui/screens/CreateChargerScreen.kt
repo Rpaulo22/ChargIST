@@ -190,13 +190,22 @@ fun CreateSpotForm(
     var typeOptions = listOf("CCS2", "Type 2")
     val (selectedType, onTypeSelected) = remember { mutableStateOf(typeOptions[0]) }
 
-    Column() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Add charging spot", fontWeight = FontWeight.Bold, fontSize = 38.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Spacer(Modifier.size(70.dp))
+        Text("Select charging speed", fontSize = 24.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Spacer(Modifier.size(12.dp))
         Row(
-            modifier = Modifier.selectableGroup()
+            modifier = Modifier.selectableGroup(),
+            horizontalArrangement = Arrangement.SpaceAround
         ) {
             speedOptions.forEach { speed ->
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
                         .selectable(
                             selected = (speed == selectedSpeed),
                             onClick = {onSpeedSelected(speed)},
@@ -211,14 +220,19 @@ fun CreateSpotForm(
                         onClick = null
                     )
                 }
+                Spacer(Modifier.size(12.dp))
             }
         }
+        Spacer(Modifier.size(12.dp))
+        Text("Select connector type", fontSize = 24.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Spacer(Modifier.size(12.dp))
         Row(
-            modifier = Modifier.selectableGroup()
+            modifier = Modifier.selectableGroup(),
+            horizontalArrangement = Arrangement.SpaceAround
         ) {
             typeOptions.forEach { type ->
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
                         .selectable(
                             selected = (type == selectedType),
                             onClick = {onTypeSelected(type)},
@@ -233,8 +247,10 @@ fun CreateSpotForm(
                         onClick = null
                     )
                 }
+                Spacer(Modifier.size(12.dp))
             }
         }
+        Spacer(Modifier.size(20.dp))
         Button(onClick = {onCreateClick()}) {Text("Add charging spot")}
     }
 }
