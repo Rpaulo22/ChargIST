@@ -21,4 +21,7 @@ interface ChargerDao {
 
     @Delete
     suspend fun deleteCharger(charger: Charger)
+
+    @Query("DELETE FROM charger")
+    suspend fun deleteRelevantChargers() // todo this function should only delete chargers in a certain radius
 }

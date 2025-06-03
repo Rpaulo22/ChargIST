@@ -61,7 +61,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             "cash" to cash,
             "creditCard" to creditCard,
             "mbWay" to mbWay,
-            "prices" to hashMapOf<String, Double>(
+            "price" to hashMapOf<String, Double>(
                 "fast" to priceFast,
                 "medium" to priceMedium,
                 "slow" to priceSlow
@@ -147,6 +147,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     fun updateChargers() {
         val db = Firebase.firestore
+
+        viewModelScope.launch {
+            chargerRepository.deleteRelevantChargers()
+        }
 
         db.collection("Charger")
             .get()

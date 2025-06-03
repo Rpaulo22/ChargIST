@@ -18,4 +18,8 @@ class ChargerRepository(private val chargerDao: ChargerDao) {
     suspend fun delete(charger: Charger) {
         chargerDao.deleteCharger(charger)
     }
+
+    suspend fun deleteRelevantChargers() {
+        chargerDao.deleteRelevantChargers()
+    }
 }
