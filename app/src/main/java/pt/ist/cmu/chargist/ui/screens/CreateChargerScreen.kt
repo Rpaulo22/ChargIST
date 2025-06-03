@@ -171,7 +171,7 @@ fun CreateChargerForm(
                 try {
                     appViewModel.createCharger(
                         name = chargerName,
-                        spots = listOf<ChargingSpot>(),
+                        spots = chargingSpots,
                         creditCard = creditCard,
                         cash = cash,
                         mbWay = mbWay,
