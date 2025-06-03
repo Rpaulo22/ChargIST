@@ -64,9 +64,9 @@ fun CreateChargerForm(
     var priceFastInput by remember { mutableStateOf("0.0") }
     var priceMediumInput by remember { mutableStateOf("0.0") }
     var priceSlowInput by remember { mutableStateOf("0.0") }
-    var priceSlow = priceSlowInput.toDoubleOrNull()
-    var priceMedium = priceMediumInput.toDoubleOrNull()
-    var priceFast = priceFastInput.toDoubleOrNull()
+    var priceSlow = priceSlowInput.replace(",", ".").toDoubleOrNull()
+    var priceMedium = priceMediumInput.replace(",", ".").toDoubleOrNull()
+    var priceFast = priceFastInput.replace(",", ".").toDoubleOrNull()
     val latitude = userLocation.value?.latitude
     val longitude= userLocation.value?.longitude
 

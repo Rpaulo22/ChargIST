@@ -87,6 +87,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 tx.set(spotRef, spotData)
             }
 
+            val spotRefs =  refs.subList(1, refs.size).map { r -> r.toString() }
+            tx.update(chargerRef, "chargingSpots", spotRefs)
+
             // return references to created documents, refs[0] ref do carregador, restantes refs dos spots
             refs
         }.addOnSuccessListener { refs ->
