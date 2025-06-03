@@ -17,7 +17,4 @@ sealed class Screen(val route: String) {
         fun createRoute() = "createCharger"
     }
 
-    object CreateSpot: Screen("createSpot") {
-        fun createRoute() = "createSpot"
-    }
 }

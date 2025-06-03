@@ -2,6 +2,7 @@ package pt.ist.cmu.chargist.ui.screens
 
 import android.Manifest
 import android.location.Geocoder
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,8 +26,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,18 +52,20 @@ import pt.ist.cmu.chargist.model.data.ChargingSpot
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import java.util.Locale
+import java.util.UUID
 
 @Composable
 fun CreateChargerForm(
     appViewModel: AppViewModel = viewModel(),
     mapViewModel: MapViewModel = viewModel(),
-    onCreateClick: () -> Unit,
-    onAddSpotClick: () -> Unit
+    onCreateClick: () -> Unit
 ) {
     val context = LocalContext.current
 
     val userLocation = mapViewModel.userLocation
     mapViewModel.fetchAddress()
+
+    var showDialog by remember { mutableStateOf(false) }
 
     var chargerName by remember { mutableStateOf("") }
     var chargingSpots = remember { mutableStateListOf<ChargingSpot>() }
@@ -90,7 +96,7 @@ fun CreateChargerForm(
         Spacer(Modifier.size(10.dp))
 
         Button(
-            onClick = { onAddSpotClick() }
+            onClick = { showDialog = true }
         ) {
             Row (
                 verticalAlignment = Alignment.CenterVertically
@@ -100,6 +106,10 @@ fun CreateChargerForm(
             }
         }
         Text("Already added ${chargingSpots.size} spots")
+        Text("Current spots:")
+        chargingSpots.forEach {
+            Text("• ${it.speed} - ${it.type}")
+        }
 
         Spacer(Modifier.size(10.dp))
 
@@ -176,13 +186,24 @@ fun CreateChargerForm(
                 catch (e: Exception) {
                     Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
                 }
-            }) { Text("Create new Charger") }
+            }
+        ) { Text("Create new Charger") }
+    }
+    if (showDialog) {
+        AddChargingSpotDialog(
+            onDismiss = { showDialog = false },
+            onConfirm = {
+                chargingSpots.add(it)
+                Log.d("Spots", "Added $it")
+            }
+        )
     }
 }
+
 @Composable
-fun CreateSpotForm(
-    appViewModel: AppViewModel,
-    onCreateClick: () -> Unit
+fun AddChargingSpotDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (ChargingSpot) -> Unit
 ) {
     var speedOptions = listOf("Slow", "Medium", "Fast")
     val (selectedSpeed, onSpeedSelected) = remember { mutableStateOf(speedOptions[0]) }
@@ -190,67 +211,98 @@ fun CreateSpotForm(
     var typeOptions = listOf("CCS2", "Type 2")
     val (selectedType, onTypeSelected) = remember { mutableStateOf(typeOptions[0]) }
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Add charging spot", fontWeight = FontWeight.Bold, fontSize = 38.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-        Spacer(Modifier.size(70.dp))
-        Text("Select charging speed", fontSize = 24.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-        Spacer(Modifier.size(12.dp))
-        Row(
-            modifier = Modifier.selectableGroup(),
-            horizontalArrangement = Arrangement.SpaceAround
-        ) {
-            speedOptions.forEach { speed ->
-                Column(
-                    modifier = Modifier
-                        .selectable(
-                            selected = (speed == selectedSpeed),
-                            onClick = {onSpeedSelected(speed)},
-                            role = Role.RadioButton),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = speed
-                    )
-                    RadioButton(
-                        selected = (speed == selectedSpeed),
-                        onClick = null
-                    )
-                }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add new Charging Spot") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(Modifier.size(40.dp))
+                Text(
+                    "Select charging speed",
+                    fontSize = 18.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
                 Spacer(Modifier.size(12.dp))
+                Row(
+                    modifier = Modifier.selectableGroup(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    speedOptions.forEach { speed ->
+                        Column(
+                            modifier = Modifier
+                                .selectable(
+                                    selected = (speed == selectedSpeed),
+                                    onClick = { onSpeedSelected(speed) },
+                                    role = Role.RadioButton
+                                ),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = speed
+                            )
+                            RadioButton(
+                                selected = (speed == selectedSpeed),
+                                onClick = null
+                            )
+                        }
+                        Spacer(Modifier.size(12.dp))
+                    }
+                }
+                Spacer(Modifier.size(20.dp))
+                Text(
+                    "Select connector type",
+                    fontSize = 18.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.size(12.dp))
+                Row(
+                    modifier = Modifier.selectableGroup(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    typeOptions.forEach { type ->
+                        Column(
+                            modifier = Modifier
+                                .selectable(
+                                    selected = (type == selectedType),
+                                    onClick = { onTypeSelected(type) },
+                                    role = Role.RadioButton
+                                ),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = type
+                            )
+                            RadioButton(
+                                selected = (type == selectedType),
+                                onClick = null
+                            )
+                        }
+                        Spacer(Modifier.size(12.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val newSpot = ChargingSpot(
+                    speed = selectedSpeed,
+                    type = selectedType
+                )
+                onConfirm(newSpot)
+                onDismiss()
+            }) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
         }
-        Spacer(Modifier.size(12.dp))
-        Text("Select connector type", fontSize = 24.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-        Spacer(Modifier.size(12.dp))
-        Row(
-            modifier = Modifier.selectableGroup(),
-            horizontalArrangement = Arrangement.SpaceAround
-        ) {
-            typeOptions.forEach { type ->
-                Column(
-                    modifier = Modifier
-                        .selectable(
-                            selected = (type == selectedType),
-                            onClick = {onTypeSelected(type)},
-                            role = Role.RadioButton),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = type
-                    )
-                    RadioButton(
-                        selected = (type == selectedType),
-                        onClick = null
-                    )
-                }
-                Spacer(Modifier.size(12.dp))
-            }
-        }
-        Spacer(Modifier.size(20.dp))
-        Button(onClick = {onCreateClick()}) {Text("Add charging spot")}
-    }
+    )
 }

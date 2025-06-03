@@ -1,10 +1,12 @@
 package pt.ist.cmu.chargist.viewmodel
 
+import android.R
 import android.app.Application
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.AndroidViewModel
@@ -25,12 +27,15 @@ import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.data.ChargingSpot
 import pt.ist.cmu.chargist.model.repository.ChargingSpotRepository
+import java.util.UUID
 
 class AppViewModel(application: Application) : AndroidViewModel(application)  {
     private val chargerRepository: ChargerRepository
     private val spotRepository: ChargingSpotRepository
     val allChargers: StateFlow<List<Charger>>
     val allChargingSpots: StateFlow<List<ChargingSpot>>
+
+    var lastSpot by mutableStateOf<ChargingSpot?>(null)
 
 
     init {
@@ -185,6 +190,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 Log.w("Firebase", "Error getting documents.", exception)
             }
 
+    }
+
+    fun createChargingSpot(speed: String, type: String) {
+        // id is randomized so that we can have multiple spots in the same list, not possible if all of them have the same default id
+        val newSpot = ChargingSpot(id = UUID.randomUUID().toString(), speed = speed, type = type)
+        lastSpot = newSpot
     }
 
     fun deleteCharger(charger: Charger) {
