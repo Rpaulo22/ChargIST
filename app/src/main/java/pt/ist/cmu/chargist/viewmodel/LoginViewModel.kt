@@ -17,6 +17,10 @@ class LoginViewModel : ViewModel() {
     val loginSuccess: StateFlow<Boolean>
         get() = _loginSuccess.asStateFlow()
 
+    private val _loginFailure = MutableStateFlow(false)
+    val loginFailure: StateFlow<Boolean>
+        get() = _loginFailure.asStateFlow()
+
     private val _isLoadingUser = MutableStateFlow(true)
     val isLoadingUser: StateFlow<Boolean>
         get() = _isLoadingUser.asStateFlow()
@@ -55,6 +59,7 @@ class LoginViewModel : ViewModel() {
                 _loginSuccess.value = true
             } catch (e: Exception) {
                 // TODO: handle
+                _loginFailure.value = true
                 Log.e("LoginViewModel", "signIn(): caught an exception: $e")
             }
         }

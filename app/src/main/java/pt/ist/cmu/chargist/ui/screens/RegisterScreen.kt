@@ -1,5 +1,6 @@
 package pt.ist.cmu.chargist.ui.screens
 
+import android.graphics.Color.red
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.play.integrity.internal.l
 import pt.ist.cmu.chargist.R
 import pt.ist.cmu.chargist.appColor
 import pt.ist.cmu.chargist.viewmodel.RegisterViewModel
@@ -51,6 +53,9 @@ fun RegisterScreen(
     goToLoginScreen: () -> Unit,
 ) {
     val context = LocalContext.current
+    val invalidEmail by registerViewModel.invalidEmail.collectAsStateWithLifecycle()
+    val invalidPassword by registerViewModel.invalidPassword.collectAsStateWithLifecycle()
+    val invalidRepeatPassword by registerViewModel.invalidRepeatPassword.collectAsStateWithLifecycle()
     val shouldRestartApp by registerViewModel.shouldRestartApp.collectAsStateWithLifecycle()
     if (shouldRestartApp) {
         Toast.makeText(context, "Registered successfully", Toast.LENGTH_SHORT).show()
@@ -58,13 +63,20 @@ fun RegisterScreen(
     } else {
         RegisterScreenContent(
             signUp = registerViewModel::signUp,
+            invalidEmail = invalidEmail,
+            invalidPassword = invalidPassword,
+            invalidRepeatPassword = invalidRepeatPassword,
         )
     }
+
 }
 
 @Composable
 fun RegisterScreenContent (
     signUp: (String, String, String) -> Unit,
+    invalidEmail: Boolean,
+    invalidPassword: Boolean,
+    invalidRepeatPassword: Boolean,
 ) {
 
     var user by remember { mutableStateOf("") }
@@ -119,7 +131,17 @@ fun RegisterScreenContent (
             onValueChange = {email = it},
             label = {Text("Email")},
         )
-        Spacer(modifier = Modifier.size(10.dp))
+        if (invalidEmail) {
+            Text(
+                text = "Invalid email",
+                color = Color.Red,
+                fontSize = 10.sp,
+                modifier = Modifier.align(Alignment.Start),
+            )
+        }
+        else {
+            Spacer(modifier = Modifier.size(10.dp))
+        }
         // Username
         OutlinedTextField(
             value = user,
@@ -162,7 +184,17 @@ fun RegisterScreenContent (
                 }
             }
         )
-        Spacer(modifier = Modifier.size(10.dp))
+        if (invalidPassword) {
+            Text(
+                text = "Invalid Password (must have atleast 6 characters)",
+                color = Color.Red,
+                fontSize = 10.sp,
+                modifier = Modifier.align(Alignment.Start),
+            )
+        }
+        else {
+            Spacer(modifier = Modifier.size(10.dp))
+        }
         // Confirm Password
         OutlinedTextField(
             value = passwordConfirm,
@@ -184,6 +216,17 @@ fun RegisterScreenContent (
                 }
             }
         )
+        if (invalidRepeatPassword) {
+            Text(
+                text = "Passwords must match",
+                color = Color.Red,
+                fontSize = 10.sp,
+                modifier = Modifier.align(Alignment.Start),
+            )
+        }
+        else {
+            Spacer(modifier = Modifier.size(10.dp))
+        }
         Spacer(modifier = Modifier.size(20.dp))
         OutlinedButton(
             onClick = {

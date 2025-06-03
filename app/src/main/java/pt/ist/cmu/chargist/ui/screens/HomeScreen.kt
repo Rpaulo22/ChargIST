@@ -115,7 +115,6 @@ fun HomeScreen(
                 permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
             ) {
                 // Ok can access location
-                Toast.makeText(context, "Has Location Permission", Toast.LENGTH_SHORT).show()
                 mapViewModel.fetchUserLocation(context, fusedLocationClient)
                 mapViewModel.startLocationUpdates(context, fusedLocationClient)
 

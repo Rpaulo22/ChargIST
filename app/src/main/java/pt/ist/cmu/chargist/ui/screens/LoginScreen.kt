@@ -53,6 +53,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pt.ist.cmu.chargist.R
 import pt.ist.cmu.chargist.appColor
@@ -87,6 +88,7 @@ fun LoginScreen(
             goToHomeScreen(userId)
         }
     }
+    val loginFailure by loginViewModel.loginFailure.collectAsStateWithLifecycle()
 
     Column (
         modifier = Modifier.fillMaxHeight().fillMaxWidth(),
@@ -129,7 +131,16 @@ fun LoginScreen(
                 }
             }
         )
-        Spacer(modifier = Modifier.size(20.dp))
+        if (loginFailure) {
+            Text(
+                text = "Incorrect email or password",
+                color = Color.Red,
+                fontSize = 10.sp,
+            )
+        }
+        else {
+            Spacer(modifier = Modifier.size(20.dp))
+        }
         OutlinedButton(
             onClick = {
                 loginViewModel.signIn(
