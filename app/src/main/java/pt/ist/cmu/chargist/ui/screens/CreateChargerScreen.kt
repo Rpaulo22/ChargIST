@@ -152,19 +152,25 @@ fun CreateChargerForm(
         Spacer(Modifier.size(10.dp))
 
         Button(
-            onClick = { appViewModel.createCharger(
-                name = chargerName,
-                spots = listOf<ChargingSpot>(),
-                creditCard = creditCard,
-                cash = cash,
-                mbWay = mbWay,
-                priceFast = priceFast?: 0.0,
-                priceMedium = priceMedium?: 0.0,
-                priceSlow = priceSlow?: 0.0,
-                lat = latitude?:0.0,
-                lng = longitude?:0.0
-            )
-            onCreateClick()
+            onClick = {
+                try {
+                    appViewModel.createCharger(
+                        name = chargerName,
+                        spots = listOf<ChargingSpot>(),
+                        creditCard = creditCard,
+                        cash = cash,
+                        mbWay = mbWay,
+                        priceFast = priceFast?: 0.0,
+                        priceMedium = priceMedium?: 0.0,
+                        priceSlow = priceSlow?: 0.0,
+                        lat = latitude?:0.0,
+                        lng = longitude?:0.0
+                    )
+                    onCreateClick()
+                }
+                catch (e: Exception) {
+                    Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                }
             }) { Text("Create new Charger") }
     }
 }

@@ -2,14 +2,17 @@ package pt.ist.cmu.chargist.viewmodel
 
 import android.app.Application
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.tasks.Tasks.await
 import com.google.firebase.Firebase
+import com.google.firebase.database.DatabaseException
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.firestore
@@ -51,8 +54,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     fun createCharger(name:String, spots:List<ChargingSpot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
                       lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double) {
-
-        return // todo evrything
 
         val data = hashMapOf(
             "name" to name,
@@ -110,9 +111,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 priceMedium,
                 priceSlow
             )
-            // TODO: pegar no c e no finalChargingSpots e fazer qualquer coisa com isso eu sei lá o quê, mas havemos de ter de os guardar
+            viewModelScope.launch {
+                for (spot in finalChargingSpots) {
+                    spotRepository.insert(spot)
+                }
+                chargerRepository.insert(c)
+            }
         }.addOnFailureListener {
-            // TODO: toast
+            throw Exception("Error creating charger. Please try again")
         }
     }
 
