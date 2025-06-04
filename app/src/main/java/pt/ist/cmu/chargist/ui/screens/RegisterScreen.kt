@@ -71,7 +71,7 @@ fun RegisterScreen(
 }
 
 @Composable
-fun RegisterScreenContent (
+private fun RegisterScreenContent (
     signUp: (String, String, String) -> Unit,
     invalidEmail: Boolean,
     invalidPassword: Boolean,
@@ -248,3 +248,4 @@ fun RegisterScreenContent (
         ) { Text("Register") }
     }
 }
+

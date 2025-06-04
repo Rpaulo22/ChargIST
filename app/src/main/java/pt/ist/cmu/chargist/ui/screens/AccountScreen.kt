@@ -49,6 +49,7 @@ fun AccountScreen(
     goToLoginScreen: () -> Unit,
     goToRegisterScreen: () -> Unit,
     goToHomeScreen: () -> Unit,
+    goToSearchScreen: () -> Unit,
     appViewModel: AppViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -62,21 +63,25 @@ fun AccountScreen(
             signOut = accountViewModel::signOut,
             goToHomeScreen = goToHomeScreen,
             goToRegisterScreen = goToRegisterScreen,
+            goToSearchScreen = goToSearchScreen
         )
     }
 }
 
 @Composable
-fun AccountScreenContent (
+private fun AccountScreenContent (
     isGuest: () -> Boolean,
     signOut: () -> Unit,
     goToRegisterScreen: () -> Unit,
     goToHomeScreen: () -> Unit,
+    goToSearchScreen: () -> Unit
 ) {
     Scaffold (
         bottomBar = {
             BottomNavigationBar(
-                onHomeClick = goToHomeScreen
+                onHomeClick = goToHomeScreen,
+                onSearchClick = goToSearchScreen,
+                currentScreen = "Account"
             )
         }
     ) { paddingValues ->

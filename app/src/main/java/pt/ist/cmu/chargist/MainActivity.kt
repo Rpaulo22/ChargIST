@@ -53,6 +53,7 @@ import pt.ist.cmu.chargist.ui.screens.LoginScreen
 import pt.ist.cmu.chargist.ui.screens.AccountScreen
 import pt.ist.cmu.chargist.ui.screens.CreateChargerForm
 import pt.ist.cmu.chargist.ui.screens.RegisterScreen
+import pt.ist.cmu.chargist.ui.screens.SearchScreen
 import pt.ist.cmu.chargist.ui.theme.ChargISTTheme
 import pt.ist.cmu.chargist.viewmodel.AccountViewModel
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
@@ -139,7 +140,32 @@ fun AppNavigation() {
                     navController.navigate(Screen.CreateCharger.route)
                 },
                 appViewModel = appViewModel,
-                mapViewModel = mapViewModel
+                mapViewModel = mapViewModel,
+                onSearchClick = {
+                    navController.navigate(Screen.Search.route)
+                }
+            )
+        }
+        composable(
+            route = Screen.Search.route,
+        ) { backStackEntry ->
+
+            // Scope the ViewModel to the "home" route
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.Home.route)
+            }
+
+            // these are the shared view models
+            val appViewModel = viewModel<AppViewModel>(parentEntry)
+            val mapViewModel = viewModel<MapViewModel>(parentEntry)
+
+            SearchScreen(
+                onAccountClick = {
+                    navController.navigate(Screen.Account.route)
+                },
+                onHomeClick = {
+                    navController.navigate(Screen.Home.route)
+                }
             )
         }
         composable(
@@ -158,6 +184,9 @@ fun AppNavigation() {
                 },
                 goToHomeScreen = {
                     navController.navigate(Screen.Home.route)
+                },
+                goToSearchScreen = {
+                    navController.navigate(Screen.Search.route)
                 }
             )
         }

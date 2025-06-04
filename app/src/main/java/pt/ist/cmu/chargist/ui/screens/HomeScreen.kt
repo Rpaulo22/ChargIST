@@ -106,6 +106,7 @@ import java.security.AccessController.getContext
 fun HomeScreen(
     onAccountClick: () -> Unit,
     onCreateCharger: () -> Unit,
+    onSearchClick: () -> Unit,
     appViewModel: AppViewModel = viewModel(),
     mapViewModel: MapViewModel = viewModel()
 ) {
@@ -155,7 +156,11 @@ fun HomeScreen(
 
     Scaffold (
         bottomBar = {
-            BottomNavigationBar(onAccountClick = onAccountClick)
+            BottomNavigationBar(
+                onAccountClick = onAccountClick,
+                onSearchClick = onSearchClick,
+                currentScreen = "Map"
+                )
         }
     ) { paddingValues ->
         Map(paddingValues, chargers, slots, userLocation, onCreateCharger)

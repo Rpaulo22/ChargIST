@@ -15,8 +15,11 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -27,7 +30,8 @@ import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 fun BottomNavigationBar(
     onHomeClick : () -> Unit = {},
     onSearchClick : () -> Unit = {},
-    onAccountClick : () -> Unit = {}
+    onAccountClick : () -> Unit = {},
+    currentScreen : String
 ) {
     Column {
         Divider(
@@ -45,30 +49,25 @@ fun BottomNavigationBar(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CustomButton(
-                    "Map",
-                    Icons.Default.Map,
-                    onHomeClick
-                )
+                val texts = listOf<String>("Map", "Search", "Account")
+                val icons = listOf<ImageVector>(Icons.Default.Map, Icons.Default.Search, Icons.Default.AccountCircle)
+                val callbacks = listOf<()->Unit>(onHomeClick, onSearchClick, onAccountClick)
 
-                CustomButton(
-                    "Search",
-                    Icons.Default.Search,
-                    onSearchClick
-                )
-
-                CustomButton(
-                    "Account",
-                    Icons.Default.AccountCircle,
-                    onAccountClick
-                )
+                for (i in 0..2) {
+                    CustomButton (
+                        texts[i],
+                        icons[i],
+                        callbacks[i],
+                        currentScreen == texts[i]
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun CustomButton(text : String, icon : ImageVector, onClick : () -> Unit) {
+private fun CustomButton(text : String, icon : ImageVector, onClick : () -> Unit, inThisScreen : Boolean) {
     IconButton(
         onClick = { onClick() },
         modifier = Modifier.size(96.dp)
@@ -76,8 +75,8 @@ private fun CustomButton(text : String, icon : ImageVector, onClick : () -> Unit
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(icon, contentDescription = text)
-            Text(text = text)
+            Icon(icon, contentDescription = text, tint = if (inThisScreen) mainColor else LocalContentColor.current)
+            Text(text = text, color = if (inThisScreen) mainColor else LocalContentColor.current)
         }
     }
 }
