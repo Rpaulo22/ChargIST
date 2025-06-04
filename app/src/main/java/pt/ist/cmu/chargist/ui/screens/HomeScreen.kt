@@ -157,29 +157,6 @@ fun HomeScreen(
         }
     ) { paddingValues ->
         Map(paddingValues, chargers, slots, userLocation, onCreateCharger)
-
-        /*LazyColumn(
-            contentPadding = PaddingValues(
-                top = paddingValues.calculateTopPadding() + 16.dp,
-                bottom = paddingValues.calculateBottomPadding() + 16.dp,
-                start = 24.dp,
-                end = 24.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            for (charger in chargers) {
-                item {
-                    Text(text = "charger: $charger")
-                }
-            }
-
-            for (slot in slots) {
-                item {
-                    Text(text = "slot: $slot")
-                }
-            }
-        }*/
     }
 }
 

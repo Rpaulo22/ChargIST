@@ -48,8 +48,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.google.firebase.Firebase
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.auth
 import pt.ist.cmu.chargist.ui.screens.HomeScreen
 import pt.ist.cmu.chargist.ui.screens.LoginScreen
 import pt.ist.cmu.chargist.ui.screens.AccountScreen
@@ -62,8 +60,6 @@ import pt.ist.cmu.chargist.viewmodel.LoginViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import pt.ist.cmu.chargist.viewmodel.RegisterViewModel
 import kotlin.collections.listOf
-
-val appColor = Color.hsv(150f, 0.79f, 0.62f)
 
 class MainActivity : ComponentActivity() {
 

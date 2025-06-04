@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pt.ist.cmu.chargist.R
-import pt.ist.cmu.chargist.appColor
+import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.RegisterViewModel
 import kotlin.math.sign
 
@@ -242,9 +242,9 @@ fun RegisterScreenContent (
                     passwordConfirm,
                 )
             },
-            colors = ButtonColors(Color.Transparent, appColor, Color.Transparent, Color.LightGray),
+            colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
-            border = BorderStroke(2.dp, appColor)
+            border = BorderStroke(2.dp, mainColor)
         ) { Text("Register") }
     }
 }
