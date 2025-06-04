@@ -128,6 +128,8 @@ fun RegisterScreenContent (
         OutlinedTextField(
             value = email,
             onValueChange = {email = it},
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            singleLine = true,
             label = {Text("Email")},
         )
         if (invalidEmail) {
@@ -145,6 +147,7 @@ fun RegisterScreenContent (
         OutlinedTextField(
             value = user,
             onValueChange = {user = it},
+            singleLine = true,
             label = {Text("Username")},
         )
         Spacer(modifier = Modifier.size(10.dp))
@@ -152,6 +155,8 @@ fun RegisterScreenContent (
         OutlinedTextField(
             value = phone,
             onValueChange = {phone = it},
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            singleLine = true,
             label = {Text("Phone Number")},
         )
         Spacer(modifier = Modifier.size(20.dp))
@@ -166,6 +171,7 @@ fun RegisterScreenContent (
         OutlinedTextField(
             value = password,
             onValueChange = {password = it},
+            singleLine = true,
             label = {Text("Password")},
             visualTransformation = visualTransformation,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -198,6 +204,7 @@ fun RegisterScreenContent (
         OutlinedTextField(
             value = passwordConfirm,
             onValueChange = {passwordConfirm = it},
+            singleLine = true,
             label = {Text("Confirm Password")},
             visualTransformation = visualTransformationConfirm,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
