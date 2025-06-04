@@ -56,6 +56,7 @@ class RegisterViewModel () : ViewModel() {
                 }
                 _invalidRepeatPassword.value = false
 
+                authRepository.createGuestAccount()
                 authRepository.signUp(email, password)
                 _shouldRestartApp.value = true
             } catch (e: Exception) {
