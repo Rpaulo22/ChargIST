@@ -36,9 +36,6 @@ class LoginViewModel : ViewModel() {
     fun loadCurrentUser() {
         viewModelScope.launch {
             try {
-                if (authRepository.currentUser == null) {
-                    authRepository.createGuestAccount()
-                }
 
                 _isLoadingUser.value = false
             } catch (e: Exception) {
@@ -61,6 +58,18 @@ class LoginViewModel : ViewModel() {
                 // TODO: handle
                 _loginFailure.value = true
                 Log.e("LoginViewModel", "signIn(): caught an exception: $e")
+            }
+        }
+    }
+
+    fun continueAsGuest() {
+        viewModelScope.launch {
+            try {
+                authRepository.createGuestAccount()
+                _loginSuccess.value = true
+            } catch (e: Exception) {
+                _loginFailure.value = true
+                Log.e("LoginViewModel", "continueAsGuest(): caught an exception: $e")
             }
         }
     }
