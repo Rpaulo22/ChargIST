@@ -56,7 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pt.ist.cmu.chargist.R
-import pt.ist.cmu.chargist.appColor
+import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.LoginViewModel
 
 @Composable
@@ -151,15 +151,15 @@ fun LoginScreen(
                     password,
                 )
             },
-            colors = ButtonColors(Color.Transparent, appColor, Color.Transparent, Color.LightGray),
+            colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
-            border = BorderStroke(2.dp, appColor)
+            border = BorderStroke(2.dp, mainColor)
         ) { Text("Login") }
         OutlinedButton(
             onClick = {goToHomeScreen(userId)},
-            colors = ButtonColors(Color.Transparent, appColor, Color.Transparent, Color.LightGray),
+            colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
-            border = BorderStroke(2.dp, appColor)
+            border = BorderStroke(2.dp, mainColor)
         ) { Text("PLACEHOLDER: Login as Guest") }
         Spacer(Modifier.size(5.dp))
         TextButton(

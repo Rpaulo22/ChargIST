@@ -11,20 +11,27 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchColors
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -37,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -49,8 +57,10 @@ import com.google.android.gms.maps.model.LatLng
 import okhttp3.Request
 import org.json.JSONObject
 import pt.ist.cmu.chargist.model.data.ChargingSlot
+import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
+import java.nio.file.WatchEvent
 import java.util.Locale
 import java.util.UUID
 
@@ -61,6 +71,7 @@ fun CreateChargerForm(
     onCreateClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val scrollState = rememberScrollState()
 
     val userLocation = mapViewModel.userLocation
     mapViewModel.fetchAddress()
@@ -82,60 +93,102 @@ fun CreateChargerForm(
     val longitude= userLocation.value?.longitude
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(8.dp),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = "Creating new Charger", fontWeight = FontWeight.Bold, fontSize = 38.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Spacer(Modifier.size(30.dp))
+        Text(text = "Creating new Charger", fontWeight = FontWeight.Bold, fontSize = 34.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         Spacer(Modifier.size(20.dp))
         OutlinedTextField(
             value = chargerName,
             onValueChange = {chargerName = it},
             label = {Text("Charger Name")}
         )
-        Spacer(Modifier.size(10.dp))
+        Spacer(Modifier.size(20.dp))
 
         Button(
-            onClick = { showDialog = true }
+            onClick = { showDialog = true },
+            colors = ButtonColors(mainColor, Color.White, Color.Transparent, Color.LightGray),
         ) {
-            Row (
+            Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.Add, contentDescription = "add")
                 Text(text = "Add Charging Slots")
             }
         }
-        Text("Already added ${chargingSlots.size} slots")
         Text("Current slots:")
         chargingSlots.forEach {
             Text("• ${it.speed} - ${it.type}")
         }
 
-        Spacer(Modifier.size(10.dp))
+        Spacer(Modifier.size(5.dp))
+        HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
+        Spacer(Modifier.size(5.dp))
 
         Text("Payment Methods", fontSize = 24.sp)
         Spacer(Modifier.size(4.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Credit Card")
-            Switch(
-                checked = creditCard,
-                onCheckedChange = {creditCard = it}
-            )
-            Spacer(Modifier.size(5.dp))
-            Text("MbWay")
-            Switch(
-                checked = mbWay,
-                onCheckedChange = {mbWay = it}
-            )
-            Spacer(Modifier.size(5.dp))
-            Text("Cash")
-            Switch(
-                checked = cash,
-                onCheckedChange = {cash = it}
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("MbWay")
+                Switch(
+                    checked = mbWay,
+                    onCheckedChange = { mbWay = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = mainColor,
+                        checkedTrackColor = mainColor.copy(alpha = 0.5f),
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color.LightGray
+                    )
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Credit Card")
+                Switch(
+                    checked = creditCard,
+                    onCheckedChange = {creditCard = it},
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = mainColor,
+                        checkedTrackColor = mainColor.copy(alpha = 0.5f),
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color.LightGray
+                    )
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Cash")
+                Switch(
+                    checked = cash,
+                    onCheckedChange = { cash = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = mainColor,
+                        checkedTrackColor = mainColor.copy(alpha = 0.5f),
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color.LightGray
+                    )
+                )
+            }
         }
 
-        Spacer(Modifier.size(10.dp))
+        Spacer(Modifier.size(5.dp))
+        HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
+        Spacer(Modifier.size(5.dp))
 
         Text("Prices", fontSize = 24.sp)
         Spacer(Modifier.size(6.dp))
@@ -163,7 +216,7 @@ fun CreateChargerForm(
             singleLine = true
         )
         Spacer(modifier = Modifier.size(16.dp))
-        Text("This charger will be placed at: ${mapViewModel.address}")
+        Text("This charger will be placed at:\n${mapViewModel.address}", textAlign = TextAlign.Center)
         Spacer(Modifier.size(10.dp))
 
         Button(
@@ -186,8 +239,10 @@ fun CreateChargerForm(
                 catch (e: Exception) {
                     Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
                 }
-            }
+            },
+            colors = ButtonColors(mainColor, Color.White, Color.Transparent, Color.LightGray)
         ) { Text("Create new Charger") }
+        Spacer(Modifier.size(30.dp))
     }
     if (showDialog) {
         AddChargingSlotDialog(
