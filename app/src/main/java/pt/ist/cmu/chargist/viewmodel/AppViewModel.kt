@@ -102,7 +102,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 tx.set(slotRef, slotData)
             }
 
-            val slotRefs =  refs.subList(1, refs.size).map { r -> r.toString() }
+            val slotRefs =  refs.subList(1, refs.size).map { r -> r.id }
             tx.update(chargerRef, "chargingSlots", slotRefs)
 
             // return references to created documents, refs[0] ref do carregador, restantes refs dos slots
@@ -119,7 +119,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             val c = Charger(
                 refs[0].toString(),
                 name,
-                refs.subList(1, refs.size).map { r -> r.toString() },
+                refs.subList(1, refs.size).map { r -> r.id },
                 creditCard,
                 cash,
                 mbWay,
