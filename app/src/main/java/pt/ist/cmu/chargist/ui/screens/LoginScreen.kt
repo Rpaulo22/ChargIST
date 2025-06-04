@@ -108,6 +108,8 @@ fun LoginScreen(
         OutlinedTextField(
             value = email,
             onValueChange = {email = it},
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            singleLine = true,
             label = {Text("Email")},
         )
         Spacer(modifier = Modifier.size(10.dp))
@@ -117,6 +119,7 @@ fun LoginScreen(
             label = {Text("Password")},
             visualTransformation = visualTransformation,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            singleLine = true,
             trailingIcon = {
                 IconButton(onClick = { showPassword = !showPassword }) {
                     Icon(
