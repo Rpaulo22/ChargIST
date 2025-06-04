@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.android.play.integrity.internal.l
 import pt.ist.cmu.chargist.R
 import pt.ist.cmu.chargist.appColor
 import pt.ist.cmu.chargist.viewmodel.RegisterViewModel

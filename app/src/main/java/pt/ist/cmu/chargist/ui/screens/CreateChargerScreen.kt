@@ -48,7 +48,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.LatLng
 import okhttp3.Request
 import org.json.JSONObject
-import pt.ist.cmu.chargist.model.data.ChargingSpot
+import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import java.util.Locale
@@ -68,7 +68,7 @@ fun CreateChargerForm(
     var showDialog by remember { mutableStateOf(false) }
 
     var chargerName by remember { mutableStateOf("") }
-    var chargingSpots = remember { mutableStateListOf<ChargingSpot>() }
+    var chargingSlots = remember { mutableStateListOf<ChargingSlot>() }
     var creditCard by remember { mutableStateOf(false) }
     var cash by remember { mutableStateOf(false) }
     var mbWay by remember { mutableStateOf(false) }
@@ -102,12 +102,12 @@ fun CreateChargerForm(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.Add, contentDescription = "add")
-                Text(text = "Add Charging Spots")
+                Text(text = "Add Charging Slots")
             }
         }
-        Text("Already added ${chargingSpots.size} spots")
-        Text("Current spots:")
-        chargingSpots.forEach {
+        Text("Already added ${chargingSlots.size} slots")
+        Text("Current slots:")
+        chargingSlots.forEach {
             Text("• ${it.speed} - ${it.type}")
         }
 
@@ -171,7 +171,7 @@ fun CreateChargerForm(
                 try {
                     appViewModel.createCharger(
                         name = chargerName,
-                        spots = chargingSpots,
+                        slots = chargingSlots,
                         creditCard = creditCard,
                         cash = cash,
                         mbWay = mbWay,
@@ -190,20 +190,20 @@ fun CreateChargerForm(
         ) { Text("Create new Charger") }
     }
     if (showDialog) {
-        AddChargingSpotDialog(
+        AddChargingSlotDialog(
             onDismiss = { showDialog = false },
             onConfirm = {
-                chargingSpots.add(it)
-                Log.d("Spots", "Added $it")
+                chargingSlots.add(it)
+                Log.d("Slots", "Added $it")
             }
         )
     }
 }
 
 @Composable
-fun AddChargingSpotDialog(
+fun AddChargingSlotDialog(
     onDismiss: () -> Unit,
-    onConfirm: (ChargingSpot) -> Unit
+    onConfirm: (ChargingSlot) -> Unit
 ) {
     var speedOptions = listOf("Slow", "Medium", "Fast")
     val (selectedSpeed, onSpeedSelected) = remember { mutableStateOf(speedOptions[0]) }
@@ -213,7 +213,7 @@ fun AddChargingSpotDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add new Charging Spot") },
+        title = { Text("Add new Charging Slot") },
         text = {
             Column(
                 verticalArrangement = Arrangement.Center,
@@ -289,11 +289,11 @@ fun AddChargingSpotDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                val newSpot = ChargingSpot(
+                val newSlot = ChargingSlot(
                     speed = selectedSpeed,
                     type = selectedType
                 )
-                onConfirm(newSpot)
+                onConfirm(newSlot)
                 onDismiss()
             }) {
                 Text("Add")

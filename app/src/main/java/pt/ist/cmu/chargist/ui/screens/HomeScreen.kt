@@ -55,7 +55,7 @@ import com.google.firebase.firestore.firestore
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.rememberCameraPositionState
 import pt.ist.cmu.chargist.model.data.Charger
-import pt.ist.cmu.chargist.model.data.ChargingSpot
+import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import kotlin.reflect.typeOf
@@ -100,7 +100,7 @@ fun HomeScreen(
 ) {
 
     val chargers by appViewModel.allChargers.collectAsState()
-    val spots by appViewModel.allChargingSpots.collectAsState()
+    val slots by appViewModel.allChargingSlots.collectAsState()
 
     val context = LocalContext.current
 
@@ -200,7 +200,7 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
-        Map(paddingValues, chargers, spots, userLocation)
+        Map(paddingValues, chargers, slots, userLocation)
 
         /*LazyColumn(
             contentPadding = PaddingValues(
@@ -218,9 +218,9 @@ fun HomeScreen(
                 }
             }
 
-            for (spot in spots) {
+            for (slot in slots) {
                 item {
-                    Text(text = "spot: $spot")
+                    Text(text = "slot: $slot")
                 }
             }
         }*/
@@ -231,7 +231,7 @@ fun HomeScreen(
 fun Map(
     paddingValues: PaddingValues,
     chargers: List<Charger>,
-    spots: List<ChargingSpot>,
+    slots: List<ChargingSlot>,
     userLocation: LatLng?,
 ) {
 

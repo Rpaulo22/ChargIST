@@ -6,11 +6,11 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [Charger::class, ChargingSpot::class], version = 3, exportSchema = false)
+@Database(entities = [Charger::class, ChargingSlot::class], version = 4, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun chargerDao(): ChargerDao
-    abstract fun chargingSpotDao(): ChargingSpotDao
+    abstract fun chargingSlotDao(): ChargingSlotDao
 
     companion object {
         @Volatile

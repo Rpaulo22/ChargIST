@@ -25,30 +25,30 @@ import kotlinx.coroutines.launch
 import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
-import pt.ist.cmu.chargist.model.data.ChargingSpot
-import pt.ist.cmu.chargist.model.repository.ChargingSpotRepository
+import pt.ist.cmu.chargist.model.data.ChargingSlot
+import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
 import java.util.UUID
 
 class AppViewModel(application: Application) : AndroidViewModel(application)  {
     private val chargerRepository: ChargerRepository
-    private val spotRepository: ChargingSpotRepository
+    private val slotRepository: ChargingSlotRepository
     val allChargers: StateFlow<List<Charger>>
-    val allChargingSpots: StateFlow<List<ChargingSpot>>
+    val allChargingSlots: StateFlow<List<ChargingSlot>>
 
-    var lastSpot by mutableStateOf<ChargingSpot?>(null)
+    var lastSlot by mutableStateOf<ChargingSlot?>(null)
 
 
     init {
         val chargerDao = AppDatabase.getDatabase(application).chargerDao()
-        val chargingSpotDao = AppDatabase.getDatabase(application).chargingSpotDao()
+        val chargingSlotDao = AppDatabase.getDatabase(application).chargingSlotDao()
         chargerRepository = ChargerRepository(chargerDao)
-        spotRepository = ChargingSpotRepository(chargingSpotDao)
+        slotRepository = ChargingSlotRepository(chargingSlotDao)
         allChargers = chargerRepository.allChargers.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             emptyList()
         )
-        allChargingSpots = spotRepository.allChargingSpots.stateIn(
+        allChargingSlots = slotRepository.allChargingSlots.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             emptyList()
@@ -57,7 +57,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         updateChargers()
     }
 
-    fun createCharger(name:String, spots:List<ChargingSpot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
+    fun createCharger(name:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
                       lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double) {
 
         if (priceFast < 0 || priceMedium < 0 || priceSlow < 0) {
@@ -90,29 +90,29 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             refs.add(chargerRef)
 
             tx.set(chargerRef, data)
-            for (spot in spots) {
-                val spotData = hashMapOf(
-                    "speed" to spot.speed,
-                    "type" to spot.type
+            for (slot in slots) {
+                val slotData = hashMapOf(
+                    "speed" to slot.speed,
+                    "type" to slot.type
                 )
 
-                val spotRef = db.collection("ChargingSpot").document()
-                refs.add(spotRef)
+                val slotRef = db.collection("ChargingSlot").document()
+                refs.add(slotRef)
 
-                tx.set(spotRef, spotData)
+                tx.set(slotRef, slotData)
             }
 
-            val spotRefs =  refs.subList(1, refs.size).map { r -> r.toString() }
-            tx.update(chargerRef, "chargingSpots", spotRefs)
+            val slotRefs =  refs.subList(1, refs.size).map { r -> r.toString() }
+            tx.update(chargerRef, "chargingSlots", slotRefs)
 
-            // return references to created documents, refs[0] ref do carregador, restantes refs dos spots
+            // return references to created documents, refs[0] ref do carregador, restantes refs dos slots
             refs
         }.addOnSuccessListener { refs ->
-            val finalChargingSpots = mutableListOf<ChargingSpot>()
+            val finalChargingSlots = mutableListOf<ChargingSlot>()
             var i = 1
-            for (spot in spots) {
-                val cs = ChargingSpot(refs[i].toString(), spot.speed, spot.type)
-                finalChargingSpots.add(cs)
+            for (slot in slots) {
+                val cs = ChargingSlot(refs[i].toString(), slot.speed, slot.type)
+                finalChargingSlots.add(cs)
                 i++
             }
 
@@ -130,8 +130,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 priceSlow
             )
             viewModelScope.launch {
-                for (spot in finalChargingSpots) {
-                    spotRepository.insert(spot)
+                for (slot in finalChargingSlots) {
+                    slotRepository.insert(slot)
                 }
                 chargerRepository.insert(c)
             }
@@ -140,21 +140,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         }
     }
 
-    fun updateSpots() {
+    fun updateSlots() {
         val db = Firebase.firestore
 
-        db.collection("ChargingSpot")
+        db.collection("ChargingSlot")
             .get()
             .addOnSuccessListener { result ->
                 for (document in result) {
-                    val spot = ChargingSpot(
+                    val slot = ChargingSlot(
                         id = document.id,
                         speed = document.data["speed"] as String,
                         type = document.data["type"] as String
                     )
                     Log.d("Firebase", "id: ${document.id} | ${document.data}")
                     viewModelScope.launch {
-                        spotRepository.insert(spot)
+                        slotRepository.insert(slot)
                     }
                 }
             }
@@ -179,7 +179,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     val charger = Charger(
                         id = document.id,
                         name = document.data["name"].toString(),
-                        chargingSpots = document.data["chargingSpots"] as List<String>,
+                        chargingSlots = document.data["chargingSlots"] as List<String>,
                         creditCard = document.data["creditCard"] as Boolean,
                         cash = document.data["cash"] as Boolean,
                         mbWay = document.data["mbWay"] as Boolean,
@@ -202,10 +202,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     }
 
-    fun createChargingSpot(speed: String, type: String) {
-        // id is randomized so that we can have multiple spots in the same list, not possible if all of them have the same default id
-        val newSpot = ChargingSpot(id = UUID.randomUUID().toString(), speed = speed, type = type)
-        lastSpot = newSpot
+    fun createChargingSlot(speed: String, type: String) {
+        // id is randomized so that we can have multiple slots in the same list, not possible if all of them have the same default id
+        val newSlot = ChargingSlot(id = UUID.randomUUID().toString(), speed = speed, type = type)
+        lastSlot = newSlot
     }
 
     fun deleteCharger(charger: Charger) {

@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class Charger(
     @PrimaryKey val id: String = "",
     val name: String,
-    var chargingSpots: List<String> = mutableListOf<String>(),
+    var chargingSlots: List<String> = mutableListOf<String>(),
     var creditCard: Boolean = false,
     var cash: Boolean = false,
     var mbWay: Boolean = false,
