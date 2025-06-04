@@ -39,16 +39,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.viewmodel.AccountViewModel
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 
 @Composable
 fun AccountScreen(
     accountViewModel: AccountViewModel,
-    userId: String,
     goToLoginScreen: () -> Unit,
     goToRegisterScreen: () -> Unit,
-    goToHomeScreen: (String) -> Unit,
+    goToHomeScreen: () -> Unit,
     appViewModel: AppViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -58,7 +58,6 @@ fun AccountScreen(
         goToLoginScreen()
     } else {
         AccountScreenContent(
-            userId = userId,
             isGuest = accountViewModel::isGuest,
             signOut = accountViewModel::signOut,
             goToHomeScreen = goToHomeScreen,
@@ -69,49 +68,16 @@ fun AccountScreen(
 
 @Composable
 fun AccountScreenContent (
-    userId: String,
     isGuest: () -> Boolean,
     signOut: () -> Unit,
     goToRegisterScreen: () -> Unit,
-    goToHomeScreen: (String) -> Unit,
+    goToHomeScreen: () -> Unit,
 ) {
     Scaffold (
         bottomBar = {
-            BottomAppBar(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
-            ) {
-                Row (
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { goToHomeScreen(userId) },
-                        modifier = Modifier.size(96.dp)
-                    ) {
-                        Column (
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(Icons.Default.Home, contentDescription = "Home")
-                            Text(text = "Home")
-                        }
-                    }
-                    IconButton(
-                        onClick = { },
-                        modifier = Modifier.size(96.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(Icons.Default.AccountCircle, contentDescription = "Account")
-                            Text(text = "Account")
-                        }
-                    }
-                }
-            }
+            BottomNavigationBar(
+                onHomeClick = goToHomeScreen
+            )
         }
     ) { paddingValues ->
         LazyColumn(
@@ -130,7 +96,7 @@ fun AccountScreenContent (
                 if (isGuest()) {
                     Text(text = "You're a guest", fontSize = 24.sp)
                 }
-                Text(text = "User $userId", fontSize = 24.sp)
+                Text(text = "User ${"1234 I Am Hardcoded!!!!"}", fontSize = 24.sp)
 
                 Spacer(modifier = Modifier.height(16.dp))
 

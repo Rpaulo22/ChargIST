@@ -12,8 +12,10 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,8 +23,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -32,6 +37,7 @@ import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.ModalBottomSheetDefaults.properties
 import androidx.compose.material3.OutlinedTextField
@@ -40,6 +46,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ComposableTarget
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
@@ -68,9 +75,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -88,12 +97,12 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import pt.ist.cmu.chargist.MainActivity
+import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import java.security.AccessController.getContext
 
 @Composable
 fun HomeScreen(
-    userId: String,
-    onAccountClick: (String) -> Unit,
+    onAccountClick: () -> Unit,
     onCreateCharger: () -> Unit,
     appViewModel: AppViewModel = viewModel(),
     mapViewModel: MapViewModel = viewModel()
@@ -144,63 +153,10 @@ fun HomeScreen(
 
     Scaffold (
         bottomBar = {
-            BottomAppBar(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
-            ) {
-                Row (
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { requestPermissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION
-                            )
-                        ) },
-                        modifier = Modifier.size(96.dp)
-                    ) {
-                        Column (
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(Icons.Default.Home, contentDescription = "Home")
-                            Text(text = "Home")
-                        }
-                    }
-
-                    IconButton(
-                        onClick = { onCreateCharger() },
-                        modifier = Modifier.size(96.dp)
-                    ) {
-                        Column (
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Add Charger")
-                            Text(text = "New Charger", modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center)
-                        }
-                    }
-
-                    IconButton(
-                        onClick = { onAccountClick(userId) },
-                        modifier = Modifier.size(96.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(Icons.Default.AccountCircle, contentDescription = "Account")
-                            Text(text = "Account")
-                        }
-                    }
-                }
-            }
+            BottomNavigationBar(onAccountClick = onAccountClick)
         }
     ) { paddingValues ->
-        Map(paddingValues, chargers, slots, userLocation)
+        Map(paddingValues, chargers, slots, userLocation, onCreateCharger)
 
         /*LazyColumn(
             contentPadding = PaddingValues(
@@ -233,48 +189,68 @@ fun Map(
     chargers: List<Charger>,
     slots: List<ChargingSlot>,
     userLocation: LatLng?,
+    onCreateCharger: () -> Unit
 ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        var mapProperties by remember { mutableStateOf(MapProperties(isMyLocationEnabled = false)) }
+        val colorScheme = ComposeMapColorScheme.FOLLOW_SYSTEM
 
-    var mapProperties by remember { mutableStateOf(MapProperties(isMyLocationEnabled = false)) }
-    val colorScheme = ComposeMapColorScheme.FOLLOW_SYSTEM
-
-    val istCoords = LatLng(38.736766738322125, -9.139350512479778)
-    var hasMovedCamera by remember { mutableStateOf(false) }
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(istCoords, 15f)
-    }
-
-    // If the app has location access, move the camera to user location
-    LaunchedEffect(userLocation) {
-        if (!hasMovedCamera && userLocation != null) {
-            cameraPositionState.animate(
-                CameraUpdateFactory.newLatLngZoom(userLocation, 15f)
-            )
-            mapProperties = mapProperties.copy(isMyLocationEnabled = true)
-            hasMovedCamera = true // only do this once so that the camera is not constantly following user
+        val istCoords = LatLng(38.736766738322125, -9.139350512479778)
+        var hasMovedCamera by remember { mutableStateOf(false) }
+        val cameraPositionState = rememberCameraPositionState {
+            position = CameraPosition.fromLatLngZoom(istCoords, 15f)
         }
-    }
 
-    GoogleMap(
-        contentPadding = paddingValues,
-        modifier = Modifier.fillMaxSize(),
-        cameraPositionState = cameraPositionState,
-        properties = mapProperties,
-        mapColorScheme = colorScheme,
-    ) {
+        // If the app has location access, move the camera to user location
+        LaunchedEffect(userLocation) {
+            if (!hasMovedCamera && userLocation != null) {
+                cameraPositionState.animate(
+                    CameraUpdateFactory.newLatLngZoom(userLocation, 15f)
+                )
+                mapProperties = mapProperties.copy(isMyLocationEnabled = true)
+                hasMovedCamera =
+                    true // only do this once so that the camera is not constantly following user
+            }
+        }
 
-        for (charger in chargers) {
-            Marker(
-                state = remember {
-                    MarkerState(
-                        position = LatLng(
-                            charger.latitude,
-                            charger.longitude
+        GoogleMap(
+            contentPadding = paddingValues,
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            properties = mapProperties,
+            mapColorScheme = colorScheme
+        ) {
+
+            for (charger in chargers) {
+                Marker(
+                    state = remember {
+                        MarkerState(
+                            position = LatLng(
+                                charger.latitude,
+                                charger.longitude
+                            )
                         )
-                    )
-                },
-                title = charger.name
+                    },
+                    title = charger.name
+                )
+            }
+        }
+
+        IconButton(
+            onClick = onCreateCharger,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(paddingValues)
+                .padding(start = 6.dp, bottom = 32.dp)
+                .background(Color.White, shape = CircleShape) // TODO: change colour
+                .size(56.dp)
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Add New Charger",
+                modifier = Modifier.size(40.dp)
             )
+
         }
     }
 }

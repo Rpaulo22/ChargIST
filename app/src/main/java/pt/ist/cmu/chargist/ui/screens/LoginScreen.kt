@@ -62,7 +62,7 @@ import pt.ist.cmu.chargist.viewmodel.LoginViewModel
 @Composable
 fun LoginScreen(
     loginViewModel: LoginViewModel,
-    goToHomeScreen: (String) -> Unit,
+    goToHomeScreen: () -> Unit,
     goToRegisterScreen: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -85,7 +85,7 @@ fun LoginScreen(
     LaunchedEffect(loginSuccess) {
         if (loginSuccess) {
             Toast.makeText(context, "Logged in successfully", Toast.LENGTH_SHORT).show()
-            goToHomeScreen(userId)
+            goToHomeScreen()
         }
     }
     val loginFailure by loginViewModel.loginFailure.collectAsStateWithLifecycle()
@@ -156,7 +156,7 @@ fun LoginScreen(
             border = BorderStroke(2.dp, appColor)
         ) { Text("Login") }
         OutlinedButton(
-            onClick = {goToHomeScreen(userId)},
+            onClick = goToHomeScreen,
             colors = ButtonColors(Color.Transparent, appColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
             border = BorderStroke(2.dp, appColor)

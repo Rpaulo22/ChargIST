@@ -100,11 +100,11 @@ fun AppNavigation() {
             val loginViewModel = viewModel<LoginViewModel>(backStackEntry)
             LoginScreen(
                 loginViewModel,
-                goToHomeScreen = { userId ->
-                    navController.navigate(Screen.Home.createRoute(userId))
+                goToHomeScreen = {
+                    navController.navigate(Screen.Home.route)
                 },
                 goToRegisterScreen = {
-                    navController.navigate(Screen.Register.createRoute())
+                    navController.navigate(Screen.Register.route)
                 },
             )
         }
@@ -124,9 +124,7 @@ fun AppNavigation() {
         }
         composable(
             route = Screen.Home.route,
-            arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId") ?: -1
 
             // Scope the ViewModel to the "home" route
             val parentEntry = remember(backStackEntry) {
@@ -138,12 +136,11 @@ fun AppNavigation() {
             val mapViewModel = viewModel<MapViewModel>(parentEntry)
 
             HomeScreen(
-                userId = userId.toString(),
-                onAccountClick = { userId ->
-                    navController.navigate(Screen.Account.createRoute(userId))
+                onAccountClick = {
+                    navController.navigate(Screen.Account.route)
                 },
                 onCreateCharger = {
-                    navController.navigate(Screen.CreateCharger.createRoute())
+                    navController.navigate(Screen.CreateCharger.route)
                 },
                 appViewModel = appViewModel,
                 mapViewModel = mapViewModel
@@ -151,23 +148,20 @@ fun AppNavigation() {
         }
         composable(
             route = Screen.Account.route,
-            arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStackEntry ->
             val accountViewModel = viewModel<AccountViewModel>(backStackEntry)
-            val userId = backStackEntry.arguments?.getString("userId") ?: -1
             AccountScreen(
                 accountViewModel = accountViewModel,
-                userId = userId.toString(),
                 goToLoginScreen = {
                     navController.navigate("login") {
                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
                 },
                 goToRegisterScreen = {
-                    navController.navigate(Screen.Register.createRoute())
+                    navController.navigate(Screen.Register)
                 },
-                goToHomeScreen = { userId ->
-                    navController.navigate(Screen.Home.createRoute(userId))
+                goToHomeScreen = {
+                    navController.navigate(Screen.Home.route)
                 }
             )
         }
