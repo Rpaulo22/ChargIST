@@ -184,7 +184,7 @@ fun CreateChargerForm(
                     onCreateClick()
                 }
                 catch (e: Exception) {
-                    Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
                 }
             }
         ) { Text("Create new Charger") }

@@ -60,6 +60,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
     fun createCharger(name:String, spots:List<ChargingSpot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
                       lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double) {
 
+        if (priceFast < 0 || priceMedium < 0 || priceSlow < 0) {
+            throw Exception("Invalid price (must be positive).")
+        }
+        if (name.length < 3) {
+            throw Exception("Charger's name must have 3 characters or more.")
+        }
+        if (!(creditCard || cash || mbWay)) {
+            throw Exception("There must be an available payment method.")
+        }
+
         val data = hashMapOf(
             "name" to name,
             "location" to GeoPoint(lat, lng),
