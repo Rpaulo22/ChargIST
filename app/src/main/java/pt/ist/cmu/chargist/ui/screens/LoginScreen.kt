@@ -151,15 +151,15 @@ fun LoginScreen(
                     password,
                 )
             },
-            colors = ButtonColors(Color.Transparent, appColor, Color.Transparent, Color.LightGray),
+            colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
-            border = BorderStroke(2.dp, appColor)
+            border = BorderStroke(2.dp, mainColor)
         ) { Text("Login") }
         OutlinedButton(
             onClick = goToHomeScreen,
             colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
-            border = BorderStroke(2.dp, appColor)
+            border = BorderStroke(2.dp, mainColor)
         ) { Text("PLACEHOLDER: Login as Guest") }
         Spacer(Modifier.size(5.dp))
         TextButton(

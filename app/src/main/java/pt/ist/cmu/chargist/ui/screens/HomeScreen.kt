@@ -13,6 +13,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -98,6 +99,7 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import pt.ist.cmu.chargist.MainActivity
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
+import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import java.security.AccessController.getContext
 
 @Composable
@@ -219,13 +221,15 @@ fun Map(
                 .align(Alignment.BottomStart)
                 .padding(paddingValues)
                 .padding(start = 6.dp, bottom = 32.dp)
-                .background(Color.White, shape = CircleShape) // TODO: change colour
+                .background(MaterialTheme.colorScheme.background, shape = CircleShape)
+                .border(2.dp, mainColor, CircleShape)
                 .size(56.dp)
         ) {
             Icon(
                 Icons.Default.Add,
                 contentDescription = "Add New Charger",
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(40.dp),
+                tint = mainColor
             )
 
         }
