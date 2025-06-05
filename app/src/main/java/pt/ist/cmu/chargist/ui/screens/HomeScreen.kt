@@ -206,6 +206,7 @@ fun Map(
         ) {
 
             for (charger in chargers) {
+                Log.d("Chargers","$charger")
                 Marker(
                     state = remember {
                         MarkerState(

@@ -111,13 +111,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             val finalChargingSlots = mutableListOf<ChargingSlot>()
             var i = 1
             for (slot in slots) {
-                val cs = ChargingSlot(refs[i].toString(), slot.speed, slot.type)
+                val cs = ChargingSlot(refs[i].id, slot.speed, slot.type)
                 finalChargingSlots.add(cs)
                 i++
             }
 
             val c = Charger(
-                refs[0].toString(),
+                refs[0].id,
                 name,
                 refs.subList(1, refs.size).map { r -> r.id },
                 creditCard,
@@ -209,6 +209,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
     }
 
     fun deleteCharger(charger: Charger) {
+        // todo delete on firestore aswell
         viewModelScope.launch {
             chargerRepository.delete(charger)
         }

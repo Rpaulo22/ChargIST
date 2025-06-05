@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -92,6 +93,7 @@ fun CreateChargerForm(
     val latitude = userLocation.value?.latitude
     val longitude= userLocation.value?.longitude
 
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -123,7 +125,20 @@ fun CreateChargerForm(
         }
         Text("Current slots:")
         chargingSlots.forEach {
-            Text("• ${it.speed} - ${it.type}")
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("• ${it.speed} - ${it.type}")
+                IconButton(
+                    onClick = {chargingSlots.remove(it)}
+                ) {
+                    Icon(
+                        Icons.Default.Cancel,
+                        contentDescription = "Remove Slot",
+                        tint = mainColor
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.size(5.dp))
