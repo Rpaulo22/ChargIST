@@ -147,7 +147,7 @@ private fun SearchScreenContent (
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background),
                         shape = RoundedCornerShape(30),
                         border = BorderStroke(2.dp, mainColor),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 56.dp, vertical = 8.dp),
                         modifier = Modifier.wrapContentSize()
                     ) {
                         Icon(
@@ -167,7 +167,7 @@ private fun SearchScreenContent (
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background),
                         shape = RoundedCornerShape(30),
                         border = BorderStroke(2.dp, mainColor),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 56.dp, vertical = 8.dp),
                         modifier = Modifier.wrapContentSize()
                     ) {
                         Icon(
