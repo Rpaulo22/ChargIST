@@ -158,7 +158,7 @@ private fun AccountScreenContent (
                         .fillMaxWidth()
                         .clickable { signOut() }
                 ) {
-                    Text(text = "Logout")
+                    Text(text = "Log Out")
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))

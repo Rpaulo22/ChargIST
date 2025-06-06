@@ -154,13 +154,13 @@ fun LoginScreen(
             colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
             border = BorderStroke(2.dp, mainColor)
-        ) { Text("Login") }
+        ) { Text("Log In") }
         OutlinedButton(
             onClick = goToHomeScreen,
             colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
             border = BorderStroke(2.dp, mainColor)
-        ) { Text("PLACEHOLDER: Login as Guest") }
+        ) { Text("PLACEHOLDER: Log In as Guest") }
         Spacer(Modifier.size(5.dp))
         TextButton(
             onClick = {goToRegisterScreen()},
