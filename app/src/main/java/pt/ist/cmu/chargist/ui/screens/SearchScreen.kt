@@ -24,7 +24,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberBasicTooltipState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
@@ -36,22 +39,31 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,13 +72,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.size.Size
 import pt.ist.cmu.chargist.Screen
+import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.AccountViewModel
@@ -94,9 +113,12 @@ private fun SearchScreenContent (
     var searchResults = remember { listOf<String>() }
     var expanded by rememberSaveable { mutableStateOf(false) }
 
+    var showSortDialog by remember { mutableStateOf(false) }
+    var showFilterDialog by remember { mutableStateOf(false) }
+
     val onSearch = { input:String -> /*TODO*/ }
-    val onSort = {}
-    val onFilter = {}
+    val onSort = { showSortDialog = true }
+    val onFilter = { showFilterDialog = true }
 
     Scaffold (
         bottomBar = {
@@ -107,7 +129,9 @@ private fun SearchScreenContent (
             )
         }
     ) { paddingValues ->
-        Box(Modifier.fillMaxSize().padding(paddingValues)) {
+        Box(Modifier
+            .fillMaxSize()
+            .padding(paddingValues)) {
             Column(Modifier.align(Alignment.TopCenter)) {
                 SearchBar(
                     modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -182,8 +206,142 @@ private fun SearchScreenContent (
                 }
             }
         }
+
+        if (showSortDialog) {
+            SortDialog({ showSortDialog = false }, {/*TODO*/})
+        }
+
+        if (showFilterDialog) {
+            FilterDialog({ showFilterDialog = false }, {/*TODO*/})
+        }
     }
 }
+
+@Composable
+fun SortDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    var selectedOption: String? by remember { mutableStateOf(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Sort by") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                SortOptionsDropdown(
+    { s ->
+                        selectedOption = s
+                    },
+                    {
+                        onConfirm()
+                        onDismiss()
+                    },
+                    selectedOption
+                )
+            }
+        },
+        confirmButton = { },
+        dismissButton = { }
+    )
+}
+
+@Composable
+fun FilterDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Filter by") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onConfirm()
+                onDismiss()
+            }) {
+                Text("Ok")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun SortOptionsDropdown(onOptionChange: (String) -> Unit, onComplete: () -> Unit, savedText: String? = null) {
+    var mExpanded by remember { mutableStateOf(true) }
+
+    val mOptions = listOf("Charging Speed", "Distance", "Price", "Travel Time", "Availability") /*TODO: pôr a Availability pela ordem alfabética caso ela chegue a ser implementada*/
+    var mSelectedText by remember { mutableStateOf(savedText?:mOptions[0]) }
+    var mTextFieldSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero)}
+
+    onOptionChange(mSelectedText) // This is redundant every time except the first when there is no previous option
+
+    // Up Icon when expanded and down icon when collapsed
+    val icon = if (mExpanded)
+        Icons.Filled.KeyboardArrowUp
+    else
+        Icons.Filled.KeyboardArrowDown
+
+    Column(Modifier.padding(20.dp)) {
+        OutlinedTextField(
+            value = mSelectedText,
+            onValueChange = { mSelectedText = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { coordinates ->
+                    mTextFieldSize = coordinates.size.toSize()
+                }
+                .clickable(onClick = { mExpanded = !mExpanded }),
+            enabled = false,
+            trailingIcon = {
+                Icon(icon,"contentDescription",
+                    Modifier.clickable { mExpanded = !mExpanded })
+            },
+            readOnly = true,
+            colors = TextFieldDefaults.colors(
+                disabledTextColor = TextFieldDefaults.colors().unfocusedTextColor,
+                disabledLabelColor = TextFieldDefaults.colors().unfocusedLabelColor
+            )
+        )
+
+        DropdownMenu(
+            expanded = mExpanded,
+            onDismissRequest = { mExpanded = false },
+            modifier = Modifier
+                .width(with(LocalDensity.current){mTextFieldSize.width.toDp()})
+        ) {
+            mOptions.forEach { label ->
+                DropdownMenuItem(
+                    text = { Text(text = label) },
+                    onClick = {
+                        mSelectedText = label
+                        onOptionChange(mSelectedText)
+                        mExpanded = false
+                    }
+                )
+            }
+
+            if (!mExpanded)
+                onComplete()
+        }
+    }
+}
+
 
 @Preview
 @Composable
