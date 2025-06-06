@@ -212,7 +212,8 @@ fun CreateChargerForm(
             onValueChange = { priceSlowInput = it },
             label = { Text("Slow Price") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true
+            singleLine = true,
+            suffix = { Text("€/kWh") }
         )
         Spacer(Modifier.size(4.dp))
         TextField(
@@ -220,7 +221,8 @@ fun CreateChargerForm(
             onValueChange = { priceMediumInput = it },
             label = { Text("Medium Price") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true
+            singleLine = true,
+            suffix = { Text("€/kWh") }
         )
         Spacer(Modifier.size(4.dp))
         TextField(
@@ -228,7 +230,8 @@ fun CreateChargerForm(
             onValueChange = { priceFastInput = it },
             label = { Text("Fast Price") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true
+            singleLine = true,
+            suffix = { Text("€/kWh") }
         )
         Spacer(modifier = Modifier.size(16.dp))
         Text("This charger will be placed at:\n${mapViewModel.address}", textAlign = TextAlign.Center)
