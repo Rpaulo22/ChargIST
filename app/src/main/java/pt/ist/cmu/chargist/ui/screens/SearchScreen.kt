@@ -76,6 +76,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -373,15 +374,15 @@ fun SpeedFilter(onSelected: (String) -> Unit, selectedSpeed: String?) {
     val (selectedSpeed, onSpeedSelected) = remember { mutableStateOf(selectedSpeed?:speedOptions[0]) }
     onSelected(selectedSpeed) // Useful the first time only
 
-    Column {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             "Charging speed",
             fontSize = 18.sp,
             modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Start
+            textAlign = TextAlign.Start,
         )
         Row(
-            modifier = Modifier.selectableGroup(),
+            modifier = Modifier.selectableGroup().fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             speedOptions.forEach { speed ->
