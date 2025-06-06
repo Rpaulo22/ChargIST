@@ -5,6 +5,7 @@ import android.R.attr.text
 import android.R.attr.thickness
 import android.R.id.input
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -37,6 +40,7 @@ import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -57,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -131,49 +136,57 @@ private fun SearchScreenContent (
                     }
                 }
                 Spacer(Modifier.size(16.dp))
-                Row {
-                    Spacer(Modifier.size(16.dp))
-                    IconButton(
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Button(
                         onClick = onSort,
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.background, shape = RoundedCornerShape(50))
-                            .border(2.dp, mainColor, RoundedCornerShape(50))
-                            .fillMaxWidth()
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background),
+                        shape = RoundedCornerShape(30),
+                        border = BorderStroke(2.dp, mainColor),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.wrapContentSize()
                     ) {
-                        Row (
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ){
-                            Icon(
-                                Icons.Default.SwapVert,
-                                contentDescription = "Sort Search",
-                                modifier = Modifier.size(40.dp),
-                                tint = mainColor
-                            )
-                            Text("Sort")
-                        }
+                        Icon(
+                            imageVector = Icons.Default.SwapVert,
+                            contentDescription = "Sort Search",
+                            modifier = Modifier.size(24.dp),
+                            tint = mainColor
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Sort", color = mainColor, fontSize = 16.sp)
                     }
-                    Spacer(Modifier.size(16.dp))
-                    IconButton(
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    Button(
                         onClick = onFilter,
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.background, shape = RoundedCornerShape(50))
-                            .border(2.dp, mainColor, RoundedCornerShape(50))
-                            .fillMaxWidth()
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background),
+                        shape = RoundedCornerShape(30),
+                        border = BorderStroke(2.dp, mainColor),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.wrapContentSize()
                     ) {
-                        Row {
-                            Icon(
-                                Icons.Default.FilterAlt,
-                                contentDescription = "Filter Search",
-                                modifier = Modifier.size(40.dp),
-                                tint = mainColor
-                            )
-                            Text("Filter")
-                        }
+                        Icon(
+                            imageVector = Icons.Default.FilterAlt,
+                            contentDescription = "Filter Search",
+                            modifier = Modifier.size(24.dp),
+                            tint = mainColor
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Filter", color = mainColor, fontSize = 16.sp)
                     }
-                    Spacer(Modifier.size(16.dp))
                 }
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun SearchScreenPreview() {
+    SearchScreen({}, {})
 }
