@@ -1,14 +1,6 @@
 package pt.ist.cmu.chargist.ui.screens
 
-import android.R.attr.onClick
-import android.R.attr.text
-import android.R.attr.thickness
-import android.R.id.input
-import android.icu.util.ULocale
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,45 +10,30 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberBasicTooltipState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FilterAlt
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -69,16 +46,13 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
@@ -87,18 +61,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.size.Size
-import com.google.android.play.integrity.internal.s
-import pt.ist.cmu.chargist.Screen
-import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
-import pt.ist.cmu.chargist.viewmodel.AccountViewModel
-import pt.ist.cmu.chargist.viewmodel.AppViewModel
-import kotlin.collections.get
-import kotlin.math.exp
 
 @Composable
 fun SearchScreen(
@@ -127,6 +91,15 @@ private fun SearchScreenContent (
     val onSearch = { input:String -> /*TODO*/ }
     val onSort = { showSortDialog = true }
     val onFilter = { showFilterDialog = true }
+
+    var sortBy: String? = null
+    var filterSpeed: String? = null
+    var filterDistanceMin: Double? = null
+    var filterDistanceMax: Double? = null
+    var filterPriceMin: Double? = null
+    var filterPriceMax: Double? = null
+    var filterTravelTimeMin: Double? = null
+    var filterTravelTimeMax: Double? = null
 
     Scaffold (
         bottomBar = {
@@ -216,11 +189,33 @@ private fun SearchScreenContent (
         }
 
         if (showSortDialog) {
-            SortDialog({ showSortDialog = false }, {/*TODO*/})
+            SortDialog(
+                { showSortDialog = false },
+                { s: String? -> sortBy = s},
+                sortBy
+            )
         }
 
         if (showFilterDialog) {
-            FilterDialog({ showFilterDialog = false }, {/*TODO*/})
+            FilterDialog(
+                { showFilterDialog = false },
+                { s: String?, dMin: Double?, dMax: Double?, pMin: Double?, pMax: Double?, tMin: Double?, tMax: Double? ->
+                    filterSpeed = s
+                    filterDistanceMin = dMin
+                    filterDistanceMax = dMax
+                    filterPriceMin = pMin
+                    filterPriceMax = pMax
+                    filterTravelTimeMin = tMin
+                    filterTravelTimeMax = tMax
+                },
+                filterSpeed,
+                filterDistanceMin,
+                filterDistanceMax,
+                filterPriceMin,
+                filterPriceMax,
+                filterTravelTimeMin,
+                filterTravelTimeMax
+            )
         }
     }
 }
@@ -228,9 +223,10 @@ private fun SearchScreenContent (
 @Composable
 fun SortDialog(
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: (String?) -> Unit,
+    prevSelection: String?
 ) {
-    var selectedOption: String? by remember { mutableStateOf(null) }
+    var selectedOption: String? by remember { mutableStateOf(prevSelection) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -245,7 +241,7 @@ fun SortDialog(
                         selectedOption = s
                     },
                     {
-                        onConfirm()
+                        onConfirm(selectedOption)
                         onDismiss()
                     },
                     selectedOption
@@ -260,9 +256,22 @@ fun SortDialog(
 @Composable
 fun FilterDialog(
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: (String?, Double?, Double?, Double?, Double?, Double?, Double?) -> Unit,
+    prevFilterSpeed: String?,
+    prevFilterDistanceMin: Double?,
+    prevFilterDistanceMax: Double?,
+    prevFilterPriceMin: Double?,
+    prevFilterPriceMax: Double?,
+    prevFilterTravelTimeMin: Double?,
+    prevFilterTravelTimeMax: Double?
 ) {
-    var selectedSpeed: String? = null
+    var selectedSpeed = prevFilterSpeed
+    var selectedDistanceMin = prevFilterDistanceMin
+    var selectedDistanceMax = prevFilterDistanceMax
+    var selectedPriceMin = prevFilterPriceMin
+    var selectedPriceMax = prevFilterPriceMax
+    var selectedTravelTimeMin = prevFilterTravelTimeMin
+    var selectedTravelTimeMax = prevFilterTravelTimeMax
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -280,20 +289,36 @@ fun FilterDialog(
                 Spacer(Modifier.size(8.dp))
                 HorizontalDivider()
                 Spacer(Modifier.size(8.dp))
-                DistanceFilter({}, {}, null, null)
+                DistanceFilter(
+                    { min ->
+                        selectedDistanceMin = min
+                    },
+                    { max ->
+                        selectedDistanceMax = max
+                    }, selectedDistanceMin, selectedDistanceMax)
                 Spacer(Modifier.size(8.dp))
                 HorizontalDivider()
                 Spacer(Modifier.size(8.dp))
-                PriceFilter({}, {}, null, null)
+                PriceFilter({ min ->
+                        selectedPriceMin = min
+                    },
+                    { max ->
+                        selectedPriceMax = max
+                    }, selectedPriceMin, selectedPriceMax)
                 Spacer(Modifier.size(8.dp))
                 HorizontalDivider()
                 Spacer(Modifier.size(8.dp))
-                TravelTimeFilter({}, {}, null, null)
+                TravelTimeFilter({ min ->
+                        selectedTravelTimeMin = min
+                    },
+                    { max ->
+                        selectedTravelTimeMax = max
+                    }, selectedTravelTimeMin, selectedTravelTimeMax)
             }
         },
         confirmButton = {
             TextButton(onClick = {
-                onConfirm()
+                onConfirm(selectedSpeed, selectedDistanceMin, selectedDistanceMax, selectedPriceMin, selectedPriceMax, selectedTravelTimeMin, selectedTravelTimeMax)
                 onDismiss()
             }) {
                 Text("Ok")
@@ -416,7 +441,7 @@ fun DistanceFilter (
     savedMax:Double?
 ) {
     val defaultMin = "0.0"
-    val defaultMax = "500.0"
+    val defaultMax = "100.0"
     var minDistanceInput by remember { mutableStateOf(savedMin?.toString() ?: defaultMin) }
     var maxDistanceInput by remember { mutableStateOf(savedMax?.toString() ?: defaultMax) }
     Column {
@@ -448,7 +473,7 @@ fun DistanceFilter (
                 value = maxDistanceInput,
                 onValueChange = {
                     maxDistanceInput = it.replace(",",".")
-                    val v = minDistanceInput.toDoubleOrNull()
+                    val v = maxDistanceInput.toDoubleOrNull()
                     if (v != null && v > defaultMax.toDouble())
                         maxDistanceInput = defaultMax
                     onMaxChange(v?:defaultMax.toDouble())
@@ -502,7 +527,7 @@ fun PriceFilter (
                 value = maxDistanceInput,
                 onValueChange = {
                     maxDistanceInput = it.replace(",",".")
-                    val v = minDistanceInput.toDoubleOrNull()
+                    val v = maxDistanceInput.toDoubleOrNull()
                     if (v != null && v > defaultMax.toDouble())
                         maxDistanceInput = defaultMax
                     onMaxChange(v?:defaultMax.toDouble())
@@ -533,7 +558,7 @@ fun TravelTimeFilter (
     savedMax:Double?
 ) {
     val defaultMin = "0.0"
-    val defaultMax = "100.0"
+    val defaultMax = "500.0"
     var minDistanceInput by remember { mutableStateOf(savedMin?.toString() ?: defaultMin) }
     var maxDistanceInput by remember { mutableStateOf(savedMax?.toString() ?: defaultMax) }
     Column {
@@ -565,7 +590,7 @@ fun TravelTimeFilter (
                 value = maxDistanceInput,
                 onValueChange = {
                     maxDistanceInput = it.replace(",",".")
-                    val v = minDistanceInput.toDoubleOrNull()
+                    val v = maxDistanceInput.toDoubleOrNull()
                     if (v != null && v > defaultMax.toDouble())
                         maxDistanceInput = defaultMax
                     onMaxChange(v?:defaultMax.toDouble())
