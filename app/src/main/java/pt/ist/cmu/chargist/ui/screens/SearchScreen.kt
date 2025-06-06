@@ -4,6 +4,7 @@ import android.R.attr.onClick
 import android.R.attr.text
 import android.R.attr.thickness
 import android.R.id.input
+import android.icu.util.ULocale
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -30,6 +31,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -63,9 +65,11 @@ import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -76,6 +80,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -84,12 +89,14 @@ import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.size.Size
+import com.google.android.play.integrity.internal.s
 import pt.ist.cmu.chargist.Screen
 import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.AccountViewModel
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
+import kotlin.collections.get
 import kotlin.math.exp
 
 @Composable
@@ -254,6 +261,8 @@ fun FilterDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    var selectedSpeed: String? = null
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Filter by") },
@@ -262,7 +271,23 @@ fun FilterDialog(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
+                AvailabilityFilter()
+                Spacer(Modifier.size(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.size(8.dp))
+                SpeedFilter({ s:String -> selectedSpeed = s}, selectedSpeed)
+                Spacer(Modifier.size(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.size(8.dp))
+                DistanceFilter({}, {}, null, null)
+                Spacer(Modifier.size(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.size(8.dp))
+                PriceFilter({}, {}, null, null)
+                Spacer(Modifier.size(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.size(8.dp))
+                TravelTimeFilter({}, {}, null, null)
             }
         },
         confirmButton = {
@@ -342,6 +367,216 @@ fun SortOptionsDropdown(onOptionChange: (String) -> Unit, onComplete: () -> Unit
     }
 }
 
+@Composable
+fun SpeedFilter(onSelected: (String) -> Unit, selectedSpeed: String?) {
+    val speedOptions = listOf("≥ Slow", "≥ Medium", "≥ Fast")
+    val (selectedSpeed, onSpeedSelected) = remember { mutableStateOf(selectedSpeed?:speedOptions[0]) }
+    onSelected(selectedSpeed) // Useful the first time only
+
+    Column {
+        Text(
+            "Charging speed",
+            fontSize = 18.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Start
+        )
+        Row(
+            modifier = Modifier.selectableGroup(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            speedOptions.forEach { speed ->
+                Column(
+                    modifier = Modifier
+                        .selectable(
+                            selected = (speed == selectedSpeed),
+                            onClick = { onSpeedSelected(speed); onSelected(speed) },
+                            role = Role.RadioButton
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = speed
+                    )
+                    RadioButton(
+                        selected = (speed == selectedSpeed),
+                        onClick = null
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DistanceFilter (
+    onMinChange: (Double)->Unit,
+    onMaxChange: (Double)->Unit,
+    savedMin: Double?,
+    savedMax:Double?
+) {
+    val defaultMin = "0.0"
+    val defaultMax = "500.0"
+    var minDistanceInput by remember { mutableStateOf(savedMin?.toString() ?: defaultMin) }
+    var maxDistanceInput by remember { mutableStateOf(savedMax?.toString() ?: defaultMax) }
+    Column {
+        Text(
+            "Distance",
+            fontSize = 18.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Start
+        )
+        Row {
+            TextField(
+                value = minDistanceInput,
+                onValueChange = {
+                    minDistanceInput = it.replace(",", ".")
+                    val v = minDistanceInput.toDoubleOrNull()
+                    if (v != null && v < defaultMin.toDouble())
+                        minDistanceInput = defaultMin
+                    onMinChange(v ?: defaultMin.toDouble())
+                },
+                label = { Text("Min") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                suffix = { Text("km") }
+            )
+        }
+        Spacer(Modifier.size(4.dp))
+        Row {
+            TextField(
+                value = maxDistanceInput,
+                onValueChange = {
+                    maxDistanceInput = it.replace(",",".")
+                    val v = minDistanceInput.toDoubleOrNull()
+                    if (v != null && v > defaultMax.toDouble())
+                        maxDistanceInput = defaultMax
+                    onMaxChange(v?:defaultMax.toDouble())
+                },
+                label = { Text("Max") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                suffix = { Text("km")}
+            )
+        }
+    }
+}
+
+@Composable
+fun PriceFilter (
+    onMinChange: (Double)->Unit,
+    onMaxChange: (Double)->Unit,
+    savedMin: Double?,
+    savedMax:Double?
+) {
+    val defaultMin = "0.0"
+    val defaultMax = "100.0"
+    var minDistanceInput by remember { mutableStateOf(savedMin?.toString() ?: defaultMin) }
+    var maxDistanceInput by remember { mutableStateOf(savedMax?.toString() ?: defaultMax) }
+    Column {
+        Text(
+            "Price",
+            fontSize = 18.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Start
+        )
+        Row {
+            TextField(
+                value = minDistanceInput,
+                onValueChange = {
+                    minDistanceInput = it.replace(",", ".")
+                    val v = minDistanceInput.toDoubleOrNull()
+                    if (v != null && v < defaultMin.toDouble())
+                        minDistanceInput = defaultMin
+                    onMinChange(v ?: defaultMin.toDouble())
+                },
+                label = { Text("Min") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                suffix = { Text("€/kWh") }
+            )
+        }
+        Spacer(Modifier.size(4.dp))
+        Row {
+            TextField(
+                value = maxDistanceInput,
+                onValueChange = {
+                    maxDistanceInput = it.replace(",",".")
+                    val v = minDistanceInput.toDoubleOrNull()
+                    if (v != null && v > defaultMax.toDouble())
+                        maxDistanceInput = defaultMax
+                    onMaxChange(v?:defaultMax.toDouble())
+                },
+                label = { Text("Max") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                suffix = { Text("€/kWh")}
+            )
+        }
+    }
+}
+
+
+@Composable
+fun AvailabilityFilter() {
+    // TODO:
+    Column {
+
+    }
+}
+
+@Composable
+fun TravelTimeFilter (
+    onMinChange: (Double)->Unit,
+    onMaxChange: (Double)->Unit,
+    savedMin: Double?,
+    savedMax:Double?
+) {
+    val defaultMin = "0.0"
+    val defaultMax = "100.0"
+    var minDistanceInput by remember { mutableStateOf(savedMin?.toString() ?: defaultMin) }
+    var maxDistanceInput by remember { mutableStateOf(savedMax?.toString() ?: defaultMax) }
+    Column {
+        Text(
+            "Travel Time",
+            fontSize = 18.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Start
+        )
+        Row {
+            TextField(
+                value = minDistanceInput,
+                onValueChange = {
+                    minDistanceInput = it.replace(",", ".")
+                    val v = minDistanceInput.toDoubleOrNull()
+                    if (v != null && v < defaultMin.toDouble())
+                        minDistanceInput = defaultMin
+                    onMinChange(v ?: defaultMin.toDouble())
+                },
+                label = { Text("Min") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                suffix = { Text("min") }
+            )
+        }
+        Spacer(Modifier.size(4.dp))
+        Row {
+            TextField(
+                value = maxDistanceInput,
+                onValueChange = {
+                    maxDistanceInput = it.replace(",",".")
+                    val v = minDistanceInput.toDoubleOrNull()
+                    if (v != null && v > defaultMax.toDouble())
+                        maxDistanceInput = defaultMax
+                    onMaxChange(v?:defaultMax.toDouble())
+                },
+                label = { Text("Max") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                suffix = { Text("min")}
+            )
+        }
+    }
+}
 
 @Preview
 @Composable
