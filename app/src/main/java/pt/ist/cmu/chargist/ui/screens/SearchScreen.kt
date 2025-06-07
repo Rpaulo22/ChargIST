@@ -220,23 +220,6 @@ private fun SearchScreenContent (
 }
 
 @Composable
-fun LocationResultItem(
-    searchViewModel: SearchViewModel,
-    address: Address,
-    onSelect: (Address?) -> Unit?
-) {
-    val formattedAddress = searchViewModel.formatAddress(address)
-
-    Row (
-        Modifier.padding(8.dp)
-            .fillMaxWidth()
-            .clickable { onSelect(address) }
-    ) {
-        Text(formattedAddress)
-    }
-}
-
-@Composable
 fun SortDialog(
     onDismiss: () -> Unit,
     onConfirm: (String?) -> Unit,

@@ -1,12 +1,15 @@
 package pt.ist.cmu.chargist.ui.elements
 
+import android.R.attr.text
 import android.location.Address
 import android.util.Log
 import android.view.Surface
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
@@ -29,11 +32,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.model.LatLng
-import pt.ist.cmu.chargist.ui.screens.LocationResultItem
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import pt.ist.cmu.chargist.viewmodel.SearchViewModel
+import kotlin.math.exp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,13 +63,15 @@ fun LocationSearchBar (
         }
     }
     val setUseSearchLocation = {
-        if (locationResults.isNotEmpty())
+        if (locationResults.isNotEmpty()) {
             onSearch(locationResults[0])
-        else
+            expanded = false
+        } else
             Toast.makeText(context, "Enter location to  use for searching chargers", Toast.LENGTH_LONG).show()
     }
     val setUseMyLocation = {
         onLocationUpdate(myLocation)
+        expanded = false
         usingMyLocation = true
     }
     val askForLocation = {
@@ -126,7 +132,10 @@ fun LocationSearchBar (
             ) {
                 if (locationResults.isEmpty()) {
                     if (!textFieldState.text.toString().isEmpty())
-                        Text("No location results for '" + textFieldState.text.toString() + "'")
+                        Text(
+                            "No location results for '${textFieldState.text}'",
+                            modifier = Modifier.padding(8.dp)
+                        )
                 } else {
                     locationResults.forEach { address ->
                         LocationResultItem(
@@ -141,5 +150,23 @@ fun LocationSearchBar (
                 }
             }
         }
+    }
+}
+
+
+@Composable
+fun LocationResultItem(
+    searchViewModel: SearchViewModel,
+    address: Address,
+    onSelect: (Address?) -> Unit?
+) {
+    val formattedAddress = searchViewModel.formatAddress(address)
+
+    Row (
+        Modifier.padding(8.dp)
+            .fillMaxWidth()
+            .clickable { onSelect(address) }
+    ) {
+        Text(formattedAddress)
     }
 }
