@@ -6,12 +6,14 @@ import android.R.attr.text
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Paint
 import android.location.Location
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -29,6 +31,7 @@ import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -76,14 +79,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -96,8 +105,10 @@ import com.google.android.gms.maps.internal.ILocationSourceDelegate
 import com.google.maps.android.compose.ComposeMapColorScheme
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerComposable
 import com.google.maps.android.compose.MarkerState
 import pt.ist.cmu.chargist.MainActivity
+import pt.ist.cmu.chargist.R
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import java.security.AccessController.getContext
@@ -207,16 +218,9 @@ fun Map(
 
             for (charger in chargers) {
                 Log.d("Chargers","$charger")
-                Marker(
-                    state = remember {
-                        MarkerState(
-                            position = LatLng(
-                                charger.latitude,
-                                charger.longitude
-                            )
-                        )
-                    },
-                    title = charger.name
+                SimpleMapMarker(
+                    charger = charger,
+                    onClick = {/*todo*/}
                 )
             }
         }
@@ -238,6 +242,43 @@ fun Map(
                 tint = mainColor
             )
 
+        }
+    }
+}
+
+@Composable
+fun SimpleMapMarker(
+    charger: Charger,
+    onClick: () -> Unit,
+    favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K")
+) {
+    val markerState = remember { MarkerState(position = LatLng(charger.latitude, charger.longitude)) }
+    val shape = CircleShape
+
+    val favourite = (charger.id in favourites)
+
+    MarkerComposable(
+        state = markerState,
+        title = charger.name,
+        anchor = Offset(0.5f, 1f),
+        onClick = {
+            onClick()
+            true
+        }
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(shape)
+                .background(Color.Black)
+        ) {
+            Image(
+                painter = painterResource(
+                    id = if (favourite) R.drawable.chargist_without_text_favourite else R.drawable.chargist_without_text // colour depends on favourite status
+                ),
+                contentDescription = "ChargIST Logo",
+                contentScale = ContentScale.Crop
+            )
         }
     }
 }
