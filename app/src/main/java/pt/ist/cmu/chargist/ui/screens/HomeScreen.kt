@@ -306,10 +306,7 @@ fun SimpleMapMarker(
         anchor = Offset(0.5f, 1f),
         onClick = {
             if (expandMarker) onClick()
-
-            else {
-                expandMarker = true
-            }
+            expandMarker = !expandMarker
 
             Log.d(
                 "Marker Click",
