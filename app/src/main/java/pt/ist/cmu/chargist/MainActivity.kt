@@ -151,7 +151,12 @@ fun AppNavigation() {
             route = Screen.Search.route,
         ) { backStackEntry ->
 
-            val searchViewModel = viewModel<SearchViewModel>(backStackEntry)
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.Home.route)
+            }
+
+            val searchViewModel = viewModel<SearchViewModel>(parentEntry)
+            val mapViewModel = viewModel<MapViewModel>(parentEntry)
 
             SearchScreen(
                 onAccountClick = {
@@ -160,7 +165,8 @@ fun AppNavigation() {
                 onHomeClick = {
                     navController.navigate(Screen.Home.route)
                 },
-                searchViewModel
+                searchViewModel,
+                mapViewModel
             )
         }
         composable(

@@ -69,10 +69,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.firestore.GeoPoint
 import android.location.Address
 import android.util.Log
+import android.widget.Toast
+import androidx.compose.material.icons.filled.LocationDisabled
+import androidx.compose.material.icons.filled.LocationSearching
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.LocalContentColor
+import com.google.android.gms.maps.model.LatLng
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
+import pt.ist.cmu.chargist.ui.elements.LocationSearchBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
+import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import pt.ist.cmu.chargist.viewmodel.SearchViewModel
 import kotlin.math.exp
 
@@ -80,12 +86,14 @@ import kotlin.math.exp
 fun SearchScreen(
     onAccountClick: () -> Unit,
     onHomeClick: () -> Unit,
-    searchViewModel: SearchViewModel = viewModel()
+    searchViewModel: SearchViewModel = viewModel(),
+    mapViewModel: MapViewModel = viewModel()
 ) {
     SearchScreenContent(
         goToHomeScreen = onHomeClick,
         goToAccountScreen = onAccountClick,
-        searchViewModel = searchViewModel
+        searchViewModel = searchViewModel,
+        mapViewModel = mapViewModel
     )
 }
 
@@ -94,18 +102,14 @@ fun SearchScreen(
 private fun SearchScreenContent (
     goToAccountScreen: () -> Unit,
     goToHomeScreen: () -> Unit,
-    searchViewModel: SearchViewModel = viewModel()
+    searchViewModel: SearchViewModel = viewModel(),
+    mapViewModel: MapViewModel = viewModel()
 ) {
-    var textFieldState = remember { TextFieldState() }
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val locationResults by searchViewModel.locationSearchResults.collectAsState()
 
     var showSortDialog by remember { mutableStateOf(false) }
     var showFilterDialog by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
-
-    var location by remember { mutableStateOf<Address?>(null) }
+    var location: LatLng? = null
     var sortBy: String? = null
     var filterSpeed: String? = null
     var filterDistanceMin: Double? = null
@@ -115,14 +119,7 @@ private fun SearchScreenContent (
     var filterTravelTimeMin: Double? = null
     var filterTravelTimeMax: Double? = null
 
-    val setUseMyLocation = { location = null }
-    val onSearch = { address: Address? ->
-        address?.let {
-            val text = address.getAddressLine(0)?:address.toString()
-            textFieldState.edit { replace(0, length, text) }
-            location = address
-        }
-    }
+    val onLocationUpdate = { latLng: LatLng? -> location = latLng }
     val onSort = { showSortDialog = true }
     val onFilter = { showFilterDialog = true }
 
@@ -139,55 +136,9 @@ private fun SearchScreenContent (
             .fillMaxSize()
             .padding(paddingValues)) {
             Column(Modifier.align(Alignment.TopCenter)) {
-                SearchBar(
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    inputField = {
-                        SearchBarDefaults.InputField(
-                            query = textFieldState.text.toString(),
-                            onQueryChange = {
-                                textFieldState.edit { replace(0, length, it) }
-                                searchViewModel.searchLocation(context, textFieldState.text.toString())
-                                Log.d("Search Location", "Updated query to: «"+textFieldState.text.toString()+"»")
-                            },
-                            onSearch = {
-                                onSearch(if (locationResults.isNotEmpty()) locationResults[0] else null)
-                                expanded = false
-                            },
-                            expanded = expanded,
-                            onExpandedChange = { expanded = it },
-                            placeholder = { Text("Search remote location") },
-                            trailingIcon = {
-                                Icon(Icons.Default.MyLocation,
-                                    "Use current location",
-                                    Modifier.clickable { setUseMyLocation() },
-                                    tint = if (location == null) mainColor else LocalContentColor.current,
-                                )
-                            },
-                        )
-                    },
-                    expanded = expanded,
-                    onExpandedChange = { expanded = it },
-                ) {
-                    Column(
-                        Modifier.verticalScroll(rememberScrollState())
-                    ) {
-                        if (locationResults.isEmpty()) {
-                            if (!textFieldState.text.toString().isEmpty())
-                                Text("No location results for '" + textFieldState.text.toString() + "'")
-                        } else {
-                            locationResults.forEach { address ->
-                                LocationResultItem(
-                                    searchViewModel,
-                                    address,
-                                    {
-                                        onSearch(it)
-                                        expanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
+
+                LocationSearchBar(onLocationUpdate, searchViewModel, mapViewModel)
+
                 Spacer(Modifier.size(16.dp))
                 Row(
                     modifier = Modifier
@@ -609,7 +560,7 @@ fun PriceFilter (
 
 @Composable
 fun AvailabilityFilter() {
-    // TODO:
+    // TODO: availability filter
     Column {
 
     }
