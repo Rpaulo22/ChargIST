@@ -36,7 +36,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -71,6 +73,7 @@ import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import kotlin.reflect.typeOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -82,11 +85,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
@@ -248,37 +253,125 @@ fun Map(
 
 @Composable
 fun SimpleMapMarker(
+    imgUrl: String? = null,
     charger: Charger,
     onClick: () -> Unit,
     favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K")
 ) {
     val markerState = remember { MarkerState(position = LatLng(charger.latitude, charger.longitude)) }
-    val shape = CircleShape
+
+    var expandMarker by remember { mutableStateOf(false) } // status that stores whether the marker is expanded
 
     val favourite = (charger.id in favourites)
 
+    val painter = rememberAsyncImagePainter(
+        ImageRequest.Builder(LocalContext.current)
+            .data(imgUrl)
+            .allowHardware(false)
+            .build()
+    )
+
     MarkerComposable(
+        keys = arrayOf(charger.name, painter.state, expandMarker),
         state = markerState,
         title = charger.name,
         anchor = Offset(0.5f, 1f),
         onClick = {
             onClick()
+            expandMarker = !expandMarker
+            Log.d(
+                "Marker Click",
+                "Clicked in marker ${charger.name} and expandMarker has value $expandMarker"
+            )
             true
         }
     ) {
         Box(
             modifier = Modifier
-                .size(48.dp)
-                .clip(shape)
+                .size(if (expandMarker) 120.dp else 48.dp)
+                .clip(if (expandMarker) RoundedCornerShape(12.dp) else CircleShape)
                 .background(Color.Black)
+                .padding(4.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Image(
-                painter = painterResource(
-                    id = if (favourite) R.drawable.chargist_without_text_favourite else R.drawable.chargist_without_text // colour depends on favourite status
-                ),
-                contentDescription = "ChargIST Logo",
-                contentScale = ContentScale.Crop
-            )
+            if (!expandMarker) {
+                Image(
+                    painter = painterResource(
+                        id = if (favourite) R.drawable.chargist_without_text_favourite else R.drawable.chargist_without_text
+                    ),
+                    contentDescription = "ChargIST Logo",
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Column(
+                    Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (!imgUrl.isNullOrEmpty()) {
+                        Image(
+                            painter = painter,
+                            contentDescription = "Profile Image",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(
+                                id = if (favourite) R.drawable.chargist_without_text_favourite else R.drawable.chargist_without_text
+                            ),
+                            contentDescription = "ChargIST Logo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp)),
+                        )
+                    }
+                    Text(
+                        text = charger.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        softWrap = false,
+                        color = Color.White
+                    )
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        if (charger.mbWay) {
+                            Image(
+                                painter = painterResource(
+                                    id = R.drawable.mbway
+                                ),
+                                contentDescription = "ChargIST Logo",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        if (charger.creditCard) {
+                            Icon(
+                                Icons.Default.CreditCard,
+                                contentDescription = "Credit card available",
+                                modifier = Modifier.size(20.dp),
+                                tint = Color.White
+                            )
+                        }
+                        if (charger.cash) {
+                            Icon(
+                                Icons.Default.Payments,
+                                contentDescription = "Cash available",
+                                modifier = Modifier.size(20.dp),
+                                tint = Color.White
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
