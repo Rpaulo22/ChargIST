@@ -74,7 +74,15 @@ import androidx.compose.material.icons.filled.LocationDisabled
 import androidx.compose.material.icons.filled.LocationSearching
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.graphics.Color
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.play.integrity.internal.l
+import com.google.android.play.integrity.internal.s
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.ui.elements.LocationSearchBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
@@ -110,14 +118,17 @@ private fun SearchScreenContent (
     var showFilterDialog by remember { mutableStateOf(false) }
 
     var location: LatLng? = null
-    var sortBy: String? = null
-    var filterSpeed: String? = null
-    var filterDistanceMin: Double? = null
-    var filterDistanceMax: Double? = null
-    var filterPriceMin: Double? = null
-    var filterPriceMax: Double? = null
-    var filterTravelTimeMin: Double? = null
-    var filterTravelTimeMax: Double? = null
+    var sortBy: String = "Charging Speed"
+    var requireMbWay = false
+    var requireCreditCard = false
+    var requireCash = false
+    var filterSpeed: Int = 0
+    var filterDistanceMin: Double = 0.0
+    var filterDistanceMax: Double = 100.0
+    var filterPriceMin: Double = 0.0
+    var filterPriceMax: Double = 100.0
+    var filterTravelTimeMin: Double = 0.0
+    var filterTravelTimeMax: Double = 500.0
 
     val onLocationUpdate = { latLng: LatLng? -> location = latLng }
     val onSort = { showSortDialog = true }
@@ -184,13 +195,25 @@ private fun SearchScreenContent (
                         Text("Filter", color = mainColor, fontSize = 16.sp)
                     }
                 }
+
+                Button(
+                    onClick = {
+                        Log.d("Search Charger", location.toString())
+                        if (location != null) {
+                            val l = location!!
+                            searchViewModel.ttWrapper(l)
+                        }
+                    }
+                ) {
+                    Text("AAAAAA")
+                }
             }
         }
 
         if (showSortDialog) {
             SortDialog(
                 { showSortDialog = false },
-                { s: String? -> sortBy = s},
+                { s: String -> sortBy = s},
                 sortBy
             )
         }
@@ -198,7 +221,7 @@ private fun SearchScreenContent (
         if (showFilterDialog) {
             FilterDialog(
                 { showFilterDialog = false },
-                { s: String?, dMin: Double?, dMax: Double?, pMin: Double?, pMax: Double?, tMin: Double?, tMax: Double? ->
+                { s: Int, dMin: Double, dMax: Double, pMin: Double, pMax: Double, tMin: Double, tMax: Double, rMW: Boolean, rCC: Boolean, rCash: Boolean ->
                     filterSpeed = s
                     filterDistanceMin = dMin
                     filterDistanceMax = dMax
@@ -206,6 +229,9 @@ private fun SearchScreenContent (
                     filterPriceMax = pMax
                     filterTravelTimeMin = tMin
                     filterTravelTimeMax = tMax
+                    requireMbWay = rMW
+                    requireCreditCard = rCC
+                    requireCash = rCash
                 },
                 filterSpeed,
                 filterDistanceMin,
@@ -213,7 +239,10 @@ private fun SearchScreenContent (
                 filterPriceMin,
                 filterPriceMax,
                 filterTravelTimeMin,
-                filterTravelTimeMax
+                filterTravelTimeMax,
+                requireMbWay,
+                requireCreditCard,
+                requireCash
             )
         }
     }
@@ -222,10 +251,10 @@ private fun SearchScreenContent (
 @Composable
 fun SortDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String?) -> Unit,
-    prevSelection: String?
+    onConfirm: (String) -> Unit,
+    prevSelection: String
 ) {
-    var selectedOption: String? by remember { mutableStateOf(prevSelection) }
+    var selectedOption: String by remember { mutableStateOf(prevSelection) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -255,14 +284,17 @@ fun SortDialog(
 @Composable
 fun FilterDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String?, Double?, Double?, Double?, Double?, Double?, Double?) -> Unit,
-    prevFilterSpeed: String?,
-    prevFilterDistanceMin: Double?,
-    prevFilterDistanceMax: Double?,
-    prevFilterPriceMin: Double?,
-    prevFilterPriceMax: Double?,
-    prevFilterTravelTimeMin: Double?,
-    prevFilterTravelTimeMax: Double?
+    onConfirm: (Int, Double, Double, Double, Double, Double, Double, Boolean, Boolean, Boolean) -> Unit,
+    prevFilterSpeed: Int,
+    prevFilterDistanceMin: Double,
+    prevFilterDistanceMax: Double,
+    prevFilterPriceMin: Double,
+    prevFilterPriceMax: Double,
+    prevFilterTravelTimeMin: Double,
+    prevFilterTravelTimeMax: Double,
+    prevRequireMbWay: Boolean,
+    prevRequireCreditCard: Boolean,
+    prevRequireCash: Boolean
 ) {
     var selectedSpeed = prevFilterSpeed
     var selectedDistanceMin = prevFilterDistanceMin
@@ -271,12 +303,16 @@ fun FilterDialog(
     var selectedPriceMax = prevFilterPriceMax
     var selectedTravelTimeMin = prevFilterTravelTimeMin
     var selectedTravelTimeMax = prevFilterTravelTimeMax
+    var selectedRequireMbWay = prevRequireMbWay
+    var selectedRequireCreditCard = prevRequireCreditCard
+    var selectedRequireCash = prevRequireCash
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Filter by") },
         text = {
             Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -284,7 +320,14 @@ fun FilterDialog(
                 Spacer(Modifier.size(8.dp))
                 HorizontalDivider()
                 Spacer(Modifier.size(8.dp))
-                SpeedFilter({ s:String -> selectedSpeed = s}, selectedSpeed)
+                SpeedFilter({ s:Int -> selectedSpeed = s}, selectedSpeed)
+                Spacer(Modifier.size(8.dp))
+                HorizontalDivider()
+                Spacer(Modifier.size(8.dp))
+                PaymentFilter(
+                    { rMW: Boolean, rCC: Boolean, rCash: Boolean, ->
+                        selectedRequireMbWay = rMW; selectedRequireCreditCard = rCC; selectedRequireCash = rCash
+                    }, selectedRequireMbWay, selectedRequireCreditCard, selectedRequireCash)
                 Spacer(Modifier.size(8.dp))
                 HorizontalDivider()
                 Spacer(Modifier.size(8.dp))
@@ -317,7 +360,9 @@ fun FilterDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                onConfirm(selectedSpeed, selectedDistanceMin, selectedDistanceMax, selectedPriceMin, selectedPriceMax, selectedTravelTimeMin, selectedTravelTimeMax)
+                onConfirm(
+                    selectedSpeed, selectedDistanceMin, selectedDistanceMax, selectedPriceMin, selectedPriceMax,
+                    selectedTravelTimeMin, selectedTravelTimeMax, selectedRequireMbWay, selectedRequireCreditCard, selectedRequireCash)
                 onDismiss()
             }) {
                 Text("Ok")
@@ -336,7 +381,7 @@ fun SortOptionsDropdown(onOptionChange: (String) -> Unit, onComplete: () -> Unit
     var mExpanded by remember { mutableStateOf(true) }
 
     val mOptions = listOf("Charging Speed", "Distance", "Price", "Travel Time", "Availability") /*TODO: pôr a Availability pela ordem alfabética caso ela chegue a ser implementada*/
-    var mSelectedText by remember { mutableStateOf(savedText?:mOptions[0]) }
+    var mSelectedText by remember { mutableStateOf(savedText?:"Charging Speed") }
     var mTextFieldSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero)}
 
     onOptionChange(mSelectedText) // This is redundant every time except the first when there is no previous option
@@ -393,14 +438,16 @@ fun SortOptionsDropdown(onOptionChange: (String) -> Unit, onComplete: () -> Unit
 }
 
 @Composable
-fun SpeedFilter(onSelected: (String) -> Unit, selectedSpeed: String?) {
+fun SpeedFilter(onSelected: (Int) -> Unit, selectedSpeed: Int?) {
     val speedOptions = listOf("≥ Slow", "≥ Medium", "≥ Fast")
-    val (selectedSpeed, onSpeedSelected) = remember { mutableStateOf(selectedSpeed?:speedOptions[0]) }
-    onSelected(selectedSpeed) // Useful the first time only
+    val (selectedSpeed, onSpeedSelected) = remember { mutableStateOf (
+        if (selectedSpeed!=null) speedOptions[selectedSpeed] else speedOptions[0]
+    ) }
+    onSelected(speedOptions.indexOf(selectedSpeed)) // Useful the first time only
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            "Charging speed",
+            "Charging Speed",
             fontSize = 18.sp,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Start,
@@ -414,7 +461,7 @@ fun SpeedFilter(onSelected: (String) -> Unit, selectedSpeed: String?) {
                     modifier = Modifier
                         .selectable(
                             selected = (speed == selectedSpeed),
-                            onClick = { onSpeedSelected(speed); onSelected(speed) },
+                            onClick = { onSpeedSelected(speed); onSelected(speedOptions.indexOf(speed)) },
                             role = Role.RadioButton
                         ),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -427,6 +474,78 @@ fun SpeedFilter(onSelected: (String) -> Unit, selectedSpeed: String?) {
                         onClick = null
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun PaymentFilter(onInteract: (Boolean, Boolean, Boolean) -> Unit,
+                  selectedRequireMbWay: Boolean, selectedRequireCreditCard: Boolean, selectedRequireCash: Boolean) {
+
+    var mbWay by remember { mutableStateOf(selectedRequireMbWay) }
+    var creditCard by remember { mutableStateOf(selectedRequireCreditCard) }
+    var cash by remember { mutableStateOf(selectedRequireCash) }
+
+    val update = { onInteract(mbWay, creditCard, cash) }
+    Column (modifier = Modifier.fillMaxWidth()) {
+        Text(
+            "Payment Method",
+            fontSize = 18.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Start,
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("MbWay")
+                Switch(
+                    checked = mbWay,
+                    onCheckedChange = { mbWay = it; update() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = mainColor,
+                        checkedTrackColor = mainColor.copy(alpha = 0.5f),
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color.LightGray
+                    )
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Credit Card")
+                Switch(
+                    checked = creditCard,
+                    onCheckedChange = { creditCard = it; update() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = mainColor,
+                        checkedTrackColor = mainColor.copy(alpha = 0.5f),
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color.LightGray
+                    )
+                )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Cash")
+                Switch(
+                    checked = cash,
+                    onCheckedChange = { cash = it; update() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = mainColor,
+                        checkedTrackColor = mainColor.copy(alpha = 0.5f),
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color.LightGray
+                    )
+                )
             }
         }
     }

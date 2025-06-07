@@ -66,7 +66,6 @@ fun LoginScreen(
     goToRegisterScreen: () -> Unit,
 ) {
     val context = LocalContext.current
-    var userId = "abcd1234" // TODO: replace this with auth info (probably no longer needs to be passed around)
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val state = remember { TextFieldState() }
