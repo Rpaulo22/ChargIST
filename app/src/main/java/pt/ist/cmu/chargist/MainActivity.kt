@@ -60,6 +60,7 @@ import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import pt.ist.cmu.chargist.viewmodel.LoginViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import pt.ist.cmu.chargist.viewmodel.RegisterViewModel
+import pt.ist.cmu.chargist.viewmodel.SearchViewModel
 import kotlin.collections.listOf
 
 class MainActivity : ComponentActivity() {
@@ -150,14 +151,7 @@ fun AppNavigation() {
             route = Screen.Search.route,
         ) { backStackEntry ->
 
-            // Scope the ViewModel to the "home" route
-            val parentEntry = remember(backStackEntry) {
-                navController.getBackStackEntry(Screen.Home.route)
-            }
-
-            // these are the shared view models
-            val appViewModel = viewModel<AppViewModel>(parentEntry)
-            val mapViewModel = viewModel<MapViewModel>(parentEntry)
+            val searchViewModel = viewModel<SearchViewModel>(backStackEntry)
 
             SearchScreen(
                 onAccountClick = {
@@ -165,7 +159,8 @@ fun AppNavigation() {
                 },
                 onHomeClick = {
                     navController.navigate(Screen.Home.route)
-                }
+                },
+                searchViewModel
             )
         }
         composable(

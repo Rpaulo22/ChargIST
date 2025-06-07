@@ -1,5 +1,7 @@
 package pt.ist.cmu.chargist.ui.screens
 
+import android.R
+import android.R.attr.onClick
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +47,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
@@ -61,17 +65,27 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.firestore.GeoPoint
+import android.location.Address
+import android.util.Log
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material3.LocalContentColor
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
+import pt.ist.cmu.chargist.viewmodel.SearchViewModel
+import kotlin.math.exp
 
 @Composable
 fun SearchScreen(
     onAccountClick: () -> Unit,
     onHomeClick: () -> Unit,
+    searchViewModel: SearchViewModel = viewModel()
 ) {
     SearchScreenContent(
         goToHomeScreen = onHomeClick,
         goToAccountScreen = onAccountClick,
+        searchViewModel = searchViewModel
     )
 }
 
@@ -80,18 +94,18 @@ fun SearchScreen(
 private fun SearchScreenContent (
     goToAccountScreen: () -> Unit,
     goToHomeScreen: () -> Unit,
+    searchViewModel: SearchViewModel = viewModel()
 ) {
     var textFieldState = remember { TextFieldState() }
-    var searchResults = remember { listOf<String>() }
     var expanded by rememberSaveable { mutableStateOf(false) }
+    val locationResults by searchViewModel.locationSearchResults.collectAsState()
 
     var showSortDialog by remember { mutableStateOf(false) }
     var showFilterDialog by remember { mutableStateOf(false) }
 
-    val onSearch = { input:String -> /*TODO*/ }
-    val onSort = { showSortDialog = true }
-    val onFilter = { showFilterDialog = true }
+    val context = LocalContext.current
 
+    var location by remember { mutableStateOf<Address?>(null) }
     var sortBy: String? = null
     var filterSpeed: String? = null
     var filterDistanceMin: Double? = null
@@ -100,6 +114,17 @@ private fun SearchScreenContent (
     var filterPriceMax: Double? = null
     var filterTravelTimeMin: Double? = null
     var filterTravelTimeMax: Double? = null
+
+    val setUseMyLocation = { location = null }
+    val onSearch = { address: Address? ->
+        address?.let {
+            val text = address.getAddressLine(0)?:address.toString()
+            textFieldState.edit { replace(0, length, text) }
+            location = address
+        }
+    }
+    val onSort = { showSortDialog = true }
+    val onFilter = { showFilterDialog = true }
 
     Scaffold (
         bottomBar = {
@@ -119,14 +144,25 @@ private fun SearchScreenContent (
                     inputField = {
                         SearchBarDefaults.InputField(
                             query = textFieldState.text.toString(),
-                            onQueryChange = { textFieldState.edit { replace(0, length, it) } },
+                            onQueryChange = {
+                                textFieldState.edit { replace(0, length, it) }
+                                searchViewModel.searchLocation(context, textFieldState.text.toString())
+                                Log.d("Search Location", "Updated query to: «"+textFieldState.text.toString()+"»")
+                            },
                             onSearch = {
-                                onSearch(textFieldState.text.toString())
+                                onSearch(if (locationResults.isNotEmpty()) locationResults[0] else null)
                                 expanded = false
                             },
                             expanded = expanded,
                             onExpandedChange = { expanded = it },
-                            placeholder = { Text("Search remote location") }
+                            placeholder = { Text("Search remote location") },
+                            trailingIcon = {
+                                Icon(Icons.Default.MyLocation,
+                                    "Use current location",
+                                    Modifier.clickable { setUseMyLocation() },
+                                    tint = if (location == null) mainColor else LocalContentColor.current,
+                                )
+                            },
                         )
                     },
                     expanded = expanded,
@@ -135,8 +171,20 @@ private fun SearchScreenContent (
                     Column(
                         Modifier.verticalScroll(rememberScrollState())
                     ) {
-                        searchResults.forEach { result ->
-                            /*TODO*/
+                        if (locationResults.isEmpty()) {
+                            if (!textFieldState.text.toString().isEmpty())
+                                Text("No location results for '" + textFieldState.text.toString() + "'")
+                        } else {
+                            locationResults.forEach { address ->
+                                LocationResultItem(
+                                    searchViewModel,
+                                    address,
+                                    {
+                                        onSearch(it)
+                                        expanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -217,6 +265,23 @@ private fun SearchScreenContent (
                 filterTravelTimeMax
             )
         }
+    }
+}
+
+@Composable
+fun LocationResultItem(
+    searchViewModel: SearchViewModel,
+    address: Address,
+    onSelect: (Address?) -> Unit?
+) {
+    val formattedAddress = searchViewModel.formatAddress(address)
+
+    Row (
+        Modifier.padding(8.dp)
+            .fillMaxWidth()
+            .clickable { onSelect(address) }
+    ) {
+        Text(formattedAddress)
     }
 }
 
@@ -360,7 +425,7 @@ fun SortOptionsDropdown(onOptionChange: (String) -> Unit, onComplete: () -> Unit
                 .clickable(onClick = { mExpanded = !mExpanded }),
             enabled = false,
             trailingIcon = {
-                Icon(icon,"contentDescription",
+                Icon(icon,"expand list",
                     Modifier.clickable { mExpanded = !mExpanded })
             },
             readOnly = true,
