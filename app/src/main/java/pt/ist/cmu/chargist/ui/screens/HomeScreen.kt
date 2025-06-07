@@ -30,15 +30,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -47,9 +53,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.ModalBottomSheetDefaults.properties
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ComposableTarget
@@ -89,6 +97,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -179,7 +188,7 @@ fun HomeScreen(
                 )
         }
     ) { paddingValues ->
-        Map(paddingValues, chargers, slots, userLocation, onCreateCharger)
+        Map(paddingValues, chargers, slots, userLocation, onCreateCharger, mapViewModel, appViewModel)
     }
 }
 
@@ -189,8 +198,14 @@ fun Map(
     chargers: List<Charger>,
     slots: List<ChargingSlot>,
     userLocation: LatLng?,
-    onCreateCharger: () -> Unit
+    onCreateCharger: () -> Unit,
+    mapViewModel: MapViewModel,
+    appViewModel: AppViewModel
 ) {
+    var showChargerInformationPanel by remember { mutableStateOf(false) }
+
+    var selectedCharger by remember { mutableStateOf<Charger?>(null) } // charger whose information panel is showing
+
     Box(modifier = Modifier.fillMaxSize()) {
         var mapProperties by remember { mutableStateOf(MapProperties(isMyLocationEnabled = false)) }
         val colorScheme = ComposeMapColorScheme.FOLLOW_SYSTEM
@@ -225,7 +240,10 @@ fun Map(
                 Log.d("Chargers","$charger")
                 SimpleMapMarker(
                     charger = charger,
-                    onClick = {/*todo*/}
+                    onClick = {
+                        showChargerInformationPanel = true
+                        selectedCharger = charger
+                    }
                 )
             }
         }
@@ -249,11 +267,19 @@ fun Map(
 
         }
     }
+    if (showChargerInformationPanel) {
+        ChargerInformationPanel(
+            onDismiss = { showChargerInformationPanel = false },
+            onConfirm = {},
+            charger = selectedCharger,
+            mapViewModel = mapViewModel,
+            appViewModel = appViewModel
+        )
+    }
 }
 
 @Composable
 fun SimpleMapMarker(
-    imgUrl: String? = null,
     charger: Charger,
     onClick: () -> Unit,
     favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K")
@@ -263,6 +289,8 @@ fun SimpleMapMarker(
     var expandMarker by remember { mutableStateOf(false) } // status that stores whether the marker is expanded
 
     val favourite = (charger.id in favourites)
+
+    val imgUrl: String? = null //todo actually sacate the image from firebase
 
     val painter = rememberAsyncImagePainter(
         ImageRequest.Builder(LocalContext.current)
@@ -277,8 +305,12 @@ fun SimpleMapMarker(
         title = charger.name,
         anchor = Offset(0.5f, 1f),
         onClick = {
-            onClick()
-            expandMarker = !expandMarker
+            if (expandMarker) onClick()
+
+            else {
+                expandMarker = true
+            }
+
             Log.d(
                 "Marker Click",
                 "Clicked in marker ${charger.name} and expandMarker has value $expandMarker"
@@ -310,12 +342,12 @@ fun SimpleMapMarker(
                     if (!imgUrl.isNullOrEmpty()) {
                         Image(
                             painter = painter,
-                            contentDescription = "Profile Image",
+                            contentDescription = "Charger Image",
                             modifier = Modifier
                                 .fillMaxSize()
                                 .weight(1f)
                                 .clip(RoundedCornerShape(16.dp)),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Fit
                         )
                     } else {
                         Image(
@@ -323,7 +355,7 @@ fun SimpleMapMarker(
                                 id = if (favourite) R.drawable.chargist_without_text_favourite else R.drawable.chargist_without_text
                             ),
                             contentDescription = "ChargIST Logo",
-                            contentScale = ContentScale.Crop,
+                            contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .weight(1f)
@@ -348,7 +380,7 @@ fun SimpleMapMarker(
                                 painter = painterResource(
                                     id = R.drawable.mbway
                                 ),
-                                contentDescription = "ChargIST Logo",
+                                contentDescription = "MbWay Available",
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -374,4 +406,150 @@ fun SimpleMapMarker(
             }
         }
     }
+}
+
+@Composable
+fun ChargerInformationPanel(
+    charger: Charger?,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    mapViewModel: MapViewModel,
+    appViewModel: AppViewModel,
+    favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K")
+) {
+    val context = LocalContext.current
+    val scrollState = rememberScrollState()
+
+    if (charger == null) {
+        Toast.makeText(context, "Error loading charger information \uD83D\uDE14", Toast.LENGTH_LONG).show()
+        return
+    }
+
+    mapViewModel.fetchAddress(LatLng(charger.latitude, charger.longitude))
+    val chargerAddress = mapViewModel.address
+
+    val imgUrl: String? = null // todo actually sacate the image from firebase
+
+    val painter = rememberAsyncImagePainter(
+        ImageRequest.Builder(LocalContext.current)
+            .data(imgUrl)
+            .allowHardware(false)
+            .build()
+    )
+
+    val favourite = (charger.id in favourites)
+
+    val slotsFlow = appViewModel.getCorrespondingChargingSlots(charger)
+    val slots by slotsFlow.collectAsState(initial = emptyList())
+
+    AlertDialog(
+        modifier =
+            Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState),
+        onDismissRequest = onDismiss,
+        title = { Text(charger.name) },
+        text = {
+            Column (
+                Modifier
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Charger Picture
+                if (!imgUrl.isNullOrEmpty()) {
+                    Image(
+                        painter = painter,
+                        contentDescription = "Charger Image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(
+                            id = if (favourite) R.drawable.chargist_without_text_favourite else R.drawable.chargist_without_text
+                        ),
+                        contentDescription = "ChargIST Logo",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp)),
+                    )
+                }
+
+                // Address of charger
+                Text(chargerAddress, textAlign = TextAlign.Center)
+                Spacer(Modifier.size(12.dp))
+
+                // Payment Methods
+                Text("Available payment methods:", textAlign = TextAlign.Center)
+                Spacer(Modifier.size(6.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    if (charger.mbWay) {
+                        Image(
+                            painter = painterResource(
+                                id = R.drawable.mbway
+                            ),
+                            contentDescription = "MbWay Available",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    if (charger.creditCard) {
+                        Icon(
+                            Icons.Default.CreditCard,
+                            contentDescription = "Credit card available",
+                            modifier = Modifier.size(20.dp),
+                            tint = Color.White
+                        )
+                    }
+                    if (charger.cash) {
+                        Icon(
+                            Icons.Default.Payments,
+                            contentDescription = "Cash available",
+                            modifier = Modifier.size(20.dp),
+                            tint = Color.White
+                        )
+                    }
+                }
+                Spacer(Modifier.size(12.dp))
+
+                // Charging Slots
+                Text("Charging slots:")
+                slots.forEach {
+                    Text("• ${it.speed} - ${it.type}")
+                }
+                Spacer(Modifier.size(12.dp))
+
+                // Prices
+                Text("Slow price: ${charger.priceSlow} €/kWh")
+                Spacer(Modifier.size(6.dp))
+                Text("Medium price: ${charger.priceMedium} €/kWh")
+                Spacer(Modifier.size(6.dp))
+                Text("Fast price: ${charger.priceFast} €/kWh")
+
+
+                // todo sitios perto, favoritos, editar
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onDismiss()
+            }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }

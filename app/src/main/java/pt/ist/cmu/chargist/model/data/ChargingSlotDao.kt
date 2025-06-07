@@ -21,4 +21,7 @@ interface ChargingSlotDao {
 
     @Delete
     suspend fun deleteChargingSlot(chargingSlot: ChargingSlot)
+
+    @Query("SELECT * FROM charging_slot WHERE id IN (:ids)")
+    fun getSlots(ids: List<String>): Flow<List<ChargingSlot>>
 }

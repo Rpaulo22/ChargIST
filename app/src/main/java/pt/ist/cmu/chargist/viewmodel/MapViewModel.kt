@@ -36,7 +36,9 @@ class MapViewModel: ViewModel() {
     var address by mutableStateOf("")
 
     // Based on current location, uses google maps api to get the address
-    fun fetchAddress() {
+    fun fetchAddress(
+        location: LatLng? = userLocation.value
+    ) {
         val lat = userLocation.value?.latitude
         val lng = userLocation.value?.longitude
 

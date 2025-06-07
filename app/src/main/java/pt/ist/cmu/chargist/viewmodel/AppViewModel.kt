@@ -18,6 +18,7 @@ import com.google.firebase.database.DatabaseException
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.firestore
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -213,5 +214,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         viewModelScope.launch {
             chargerRepository.delete(charger)
         }
+    }
+
+    fun getCorrespondingChargingSlots(charger: Charger): Flow<List<ChargingSlot>> {
+        return slotRepository.getSlots(charger.chargingSlots)
     }
 }
