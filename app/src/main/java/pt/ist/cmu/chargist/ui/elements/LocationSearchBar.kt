@@ -53,6 +53,7 @@ fun LocationSearchBar (
 
     var usingMyLocation by remember { mutableStateOf(true)}
     val myLocation by mapViewModel.userLocation
+    onLocationUpdate(myLocation) // ensure initial value is passed
 
     val onSearch = { address: Address? ->
         address?.let {
