@@ -44,9 +44,12 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -243,7 +246,8 @@ fun Map(
                     onClick = {
                         showChargerInformationPanel = true
                         selectedCharger = charger
-                    }
+                    },
+                    mapViewModel = mapViewModel
                 )
             }
         }
@@ -282,7 +286,8 @@ fun Map(
 fun SimpleMapMarker(
     charger: Charger,
     onClick: () -> Unit,
-    favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K")
+    favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K"),
+    mapViewModel: MapViewModel
 ) {
     val markerState = remember { MarkerState(position = LatLng(charger.latitude, charger.longitude)) }
 
@@ -298,6 +303,10 @@ fun SimpleMapMarker(
             .allowHardware(false)
             .build()
     )
+
+    if (mapViewModel.closeTo(charger)) {
+        expandMarker = true
+    }
 
     MarkerComposable(
         keys = arrayOf(charger.name, painter.state, expandMarker),
@@ -368,37 +377,12 @@ fun SimpleMapMarker(
                         softWrap = false,
                         color = Color.White
                     )
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        if (charger.mbWay) {
-                            Image(
-                                painter = painterResource(
-                                    id = R.drawable.mbway
-                                ),
-                                contentDescription = "MbWay Available",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        if (charger.creditCard) {
-                            Icon(
-                                Icons.Default.CreditCard,
-                                contentDescription = "Credit card available",
-                                modifier = Modifier.size(20.dp),
-                                tint = Color.White
-                            )
-                        }
-                        if (charger.cash) {
-                            Icon(
-                                Icons.Default.Payments,
-                                contentDescription = "Cash available",
-                                modifier = Modifier.size(20.dp),
-                                tint = Color.White
-                            )
-                        }
-                    }
+                    PaymentMethods(
+                        mbWay = charger.mbWay,
+                        creditCard = charger.creditCard,
+                        cash = charger.cash,
+                        size = 20
+                    )
                 }
             }
         }
@@ -415,7 +399,6 @@ fun ChargerInformationPanel(
     favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K")
 ) {
     val context = LocalContext.current
-    val scrollState = rememberScrollState()
 
     if (charger == null) {
         Toast.makeText(context, "Error loading charger information \uD83D\uDE14", Toast.LENGTH_LONG).show()
@@ -425,105 +408,50 @@ fun ChargerInformationPanel(
     mapViewModel.fetchAddress(LatLng(charger.latitude, charger.longitude))
     val chargerAddress = mapViewModel.address
 
-    val imgUrl: String? = null // todo actually sacate the image from firebase
-
-    val painter = rememberAsyncImagePainter(
-        ImageRequest.Builder(LocalContext.current)
-            .data(imgUrl)
-            .allowHardware(false)
-            .build()
-    )
-
-    val favourite = (charger.id in favourites)
+    var favourite by remember { mutableStateOf(charger.id in favourites)}
 
     val slotsFlow = appViewModel.getCorrespondingChargingSlots(charger)
     val slots by slotsFlow.collectAsState(initial = emptyList())
 
     AlertDialog(
-        modifier =
-            Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState),
         onDismissRequest = onDismiss,
         title = { Text(charger.name) },
         text = {
             Column (
                 Modifier
-                    .fillMaxSize(),
+                    .fillMaxSize()
+                    .padding(horizontal = 2.dp, vertical = 8.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Charger Picture
-                if (!imgUrl.isNullOrEmpty()) {
-                    Image(
-                        painter = painter,
-                        contentDescription = "Charger Image",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Fit
-                    )
-                } else {
-                    Image(
-                        painter = painterResource(
-                            id = if (favourite) R.drawable.chargist_without_text_favourite else R.drawable.chargist_without_text
-                        ),
-                        contentDescription = "ChargIST Logo",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .clip(RoundedCornerShape(16.dp)),
-                    )
-                }
+                ChargerImage(charger, favourite)
 
                 // Address of charger
                 Text(chargerAddress, textAlign = TextAlign.Center)
-                Spacer(Modifier.size(12.dp))
+
+                HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
                 // Payment Methods
                 Text("Available payment methods:", textAlign = TextAlign.Center)
                 Spacer(Modifier.size(6.dp))
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    if (charger.mbWay) {
-                        Image(
-                            painter = painterResource(
-                                id = R.drawable.mbway
-                            ),
-                            contentDescription = "MbWay Available",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    if (charger.creditCard) {
-                        Icon(
-                            Icons.Default.CreditCard,
-                            contentDescription = "Credit card available",
-                            modifier = Modifier.size(20.dp),
-                            tint = Color.White
-                        )
-                    }
-                    if (charger.cash) {
-                        Icon(
-                            Icons.Default.Payments,
-                            contentDescription = "Cash available",
-                            modifier = Modifier.size(20.dp),
-                            tint = Color.White
-                        )
-                    }
-                }
-                Spacer(Modifier.size(12.dp))
+                PaymentMethods(
+                    mbWay = charger.mbWay,
+                    creditCard = charger.creditCard,
+                    cash = charger.cash,
+                    size = 30
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
                 // Charging Slots
                 Text("Charging slots:")
                 slots.forEach {
-                    Text("• ${it.speed} - ${it.type}")
+                    ChargingSlotField(it)
+                    Spacer(Modifier.size(4.dp))
                 }
-                Spacer(Modifier.size(12.dp))
+
+                HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
                 // Prices
                 Text("Slow price: ${charger.priceSlow} €/kWh")
@@ -532,8 +460,31 @@ fun ChargerInformationPanel(
                 Spacer(Modifier.size(6.dp))
                 Text("Fast price: ${charger.priceFast} €/kWh")
 
+                HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
-                // todo sitios perto, favoritos, editar
+                Text("Favourite")
+                IconButton(
+                    onClick = {favourite = !favourite},
+                ) {
+                    if (favourite) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = "Cash available",
+                            modifier = Modifier.size(30.dp),
+                            tint = Color.Yellow
+                        )
+                    }
+                    else {
+                        Icon(
+                            Icons.Default.StarBorder,
+                            contentDescription = "Cash available",
+                            modifier = Modifier.size(30.dp),
+                            tint = Color.Yellow
+                        )
+                    }
+                }
+
+                // todo sitios perto, editar
             }
         },
         confirmButton = {
@@ -549,4 +500,94 @@ fun ChargerInformationPanel(
             }
         }
     )
+}
+
+@Composable
+fun ChargerImage(
+    charger:Charger,
+    favourite: Boolean
+) {
+    val imgUrl: String? = null // todo actually sacate the image from firebase
+
+    val painter = rememberAsyncImagePainter(
+        ImageRequest.Builder(LocalContext.current)
+            .data(imgUrl)
+            .allowHardware(false)
+            .build()
+    )
+
+    // Charger Picture
+    if (!imgUrl.isNullOrEmpty()) {
+        Image(
+            painter = painter,
+            contentDescription = "Charger Image",
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp)),
+            contentScale = ContentScale.Fit
+        )
+    } else {
+        Image(
+            painter = painterResource(
+                id = if (favourite) R.drawable.chargist_without_text_favourite else R.drawable.chargist_without_text
+            ),
+            contentDescription = "ChargIST Logo",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp)),
+        )
+    }
+}
+
+@Composable
+fun PaymentMethods(
+    mbWay: Boolean,
+    creditCard: Boolean,
+    cash: Boolean,
+    size: Int
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        if (mbWay) {
+            Image(
+                painter = painterResource(
+                    id = R.drawable.mbway
+                ),
+                contentDescription = "MbWay Available",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(size.dp)
+            )
+        }
+        if (creditCard) {
+            Icon(
+                Icons.Default.CreditCard,
+                contentDescription = "Credit card available",
+                modifier = Modifier.size(size.dp),
+                tint = Color.White
+            )
+        }
+        if (cash) {
+            Icon(
+                Icons.Default.Payments,
+                contentDescription = "Cash available",
+                modifier = Modifier.size(size.dp),
+                tint = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+fun ChargingSlotField(slot: ChargingSlot) {
+    Box(
+        Modifier
+            .background(MaterialTheme.colorScheme.background, RoundedCornerShape(8.dp))
+            .padding(6.dp)
+    ) {
+        Text("${slot.speed} - ${slot.type}")
+    }
+
 }

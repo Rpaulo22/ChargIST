@@ -4,6 +4,7 @@ import pt.ist.cmu.chargist.BuildConfig
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Looper
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -26,6 +27,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import pt.ist.cmu.chargist.model.data.Charger
 
 class MapViewModel: ViewModel() {
 
@@ -91,6 +93,22 @@ class MapViewModel: ViewModel() {
         } else {
             Log.d("MapViewModel", "Location permission is not granted.")
         }
+    }
+
+    // Function which determines if charger is expanded
+    fun closeTo(charger: Charger): Boolean {
+        val results = FloatArray(1)
+
+        if (userLocation.value == null) {
+            return false
+        }
+
+        Location.distanceBetween(
+            userLocation.value!!.latitude, userLocation.value!!.longitude,
+            charger.latitude, charger.longitude, results
+        )
+
+        return results[0] <= 50
     }
 
     @SuppressLint("MissingPermission")
