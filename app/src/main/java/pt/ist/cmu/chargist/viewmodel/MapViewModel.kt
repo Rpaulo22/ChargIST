@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.LocationCallback
@@ -35,43 +36,40 @@ class MapViewModel: ViewModel() {
     private val _userLocation = mutableStateOf<LatLng?>(null)
     val userLocation: State<LatLng?> = _userLocation
 
-    var address by mutableStateOf("")
+    var currentAddress by mutableStateOf("")
 
     // Based on current location, uses google maps api to get the address
-    fun fetchAddress(
-        location: LatLng? = userLocation.value
-    ) {
-        val lat = userLocation.value?.latitude
-        val lng = userLocation.value?.longitude
+    fun fetchAddress() {
+        if (userLocation.value != null) {
+            viewModelScope.launch { currentAddress = getAddress(userLocation.value!!)}}
+    }
 
-        // launch a coroutine to execute http request (http requests can't be executed on main thread)
-        viewModelScope.launch(Dispatchers.IO) {
-            val client = OkHttpClient()
-            val apiKey = BuildConfig.MAPS_API_KEY
-            val url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey"
+    suspend fun getAddress(location: LatLng): String = withContext(Dispatchers.IO) {
+        val lat = location.latitude
+        val lng = location.longitude
 
-            try {
-                val request = Request.Builder().url(url).build()
-                val response = client.newCall(request).execute()
+        val client = OkHttpClient()
+        val apiKey = BuildConfig.MAPS_API_KEY
+        val url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey"
 
-                if (response.isSuccessful) {
-                    val json = JSONObject(response.body?.string() ?: "")
-                    val formattedAddress = json.getJSONArray("results")
-                        .getJSONObject(0)
-                        .getString("formatted_address")
+        try {
+            val request = Request.Builder().url(url).build()
+            val response = client.newCall(request).execute()
 
-                    withContext(Dispatchers.Main) {
-                        address = formattedAddress
-                    }
-                } else {
-                    address = "unknown"
-                }
-            } catch (e: Exception) {
-                Log.e("Network", "Error: ${e.message}")
-                address = "error"
+            if (response.isSuccessful) {
+                val json = JSONObject(response.body?.string() ?: "")
+                json.getJSONArray("results")
+                    .getJSONObject(0)
+                    .getString("formatted_address")
+            } else {
+                "Unknown address"
             }
+        } catch (e: Exception) {
+            Log.e("Network", "Error: ${e.message}")
+            "Error retrieving address"
         }
     }
+
 
 
     // Function to fetch the user's location and update the state

@@ -75,7 +75,9 @@ fun CreateChargerForm(
     val scrollState = rememberScrollState()
 
     val userLocation = mapViewModel.userLocation
-    mapViewModel.fetchAddress()
+
+    LaunchedEffect(userLocation) { mapViewModel.fetchAddress() } // update address of current location
+
 
     var showDialog by remember { mutableStateOf(false) }
 
@@ -234,7 +236,7 @@ fun CreateChargerForm(
             suffix = { Text("€/kWh") }
         )
         Spacer(modifier = Modifier.size(16.dp))
-        Text("This charger will be placed at:\n${mapViewModel.address}", textAlign = TextAlign.Center)
+        Text("This charger will be placed at:\n${mapViewModel.currentAddress}", textAlign = TextAlign.Center)
         Spacer(Modifier.size(10.dp))
 
         Button(

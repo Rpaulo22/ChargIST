@@ -274,7 +274,8 @@ fun Map(
     if (showChargerInformationPanel) {
         ChargerInformationPanel(
             onDismiss = { showChargerInformationPanel = false },
-            onConfirm = {},
+            onConfirm = { charger: Charger ->
+                appViewModel.updateCharger(charger)},
             charger = selectedCharger,
             mapViewModel = mapViewModel,
             appViewModel = appViewModel
@@ -295,7 +296,7 @@ fun SimpleMapMarker(
 
     val favourite = (charger.id in favourites)
 
-    val imgUrl: String? = null //todo actually sacate the image from firebase
+    val imgUrl: String? = null // todo actually sacate the image from firebase
 
     val painter = rememberAsyncImagePainter(
         ImageRequest.Builder(LocalContext.current)
@@ -393,7 +394,7 @@ fun SimpleMapMarker(
 fun ChargerInformationPanel(
     charger: Charger?,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
+    onConfirm: (Charger) -> Unit,
     mapViewModel: MapViewModel,
     appViewModel: AppViewModel,
     favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K")
@@ -405,8 +406,11 @@ fun ChargerInformationPanel(
         return
     }
 
-    mapViewModel.fetchAddress(LatLng(charger.latitude, charger.longitude))
-    val chargerAddress = mapViewModel.address
+    var chargerAddress by remember { mutableStateOf("Loading...") }
+
+    LaunchedEffect(Unit) { // launch  coroutine to obtain charger address
+        chargerAddress = mapViewModel.getAddress(LatLng(charger.latitude,charger.longitude))
+    }
 
     var favourite by remember { mutableStateOf(charger.id in favourites)}
 
@@ -489,6 +493,7 @@ fun ChargerInformationPanel(
         },
         confirmButton = {
             TextButton(onClick = {
+                onConfirm(charger)
                 onDismiss()
             }) {
                 Text("Save")

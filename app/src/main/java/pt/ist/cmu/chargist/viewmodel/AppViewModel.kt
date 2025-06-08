@@ -16,6 +16,7 @@ import com.google.android.gms.tasks.Tasks.await
 import com.google.firebase.Firebase
 import com.google.firebase.database.DatabaseException
 import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
@@ -141,6 +142,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         }
     }
 
+    fun updateCharger(charger: Charger) {
+        val db = Firebase.firestore
+
+
+    }
+
     fun updateSlots() {
         val db = Firebase.firestore
 
@@ -195,10 +202,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     viewModelScope.launch {
                         chargerRepository.insert(charger)
                     }
+                    if (charger.chargingSlots.isNotEmpty()) {
+                        db.collection("ChargingSlot")
+                            .whereIn(FieldPath.documentId(), charger.chargingSlots)
+                            .get()
+                            .addOnSuccessListener { result ->
+                                for (document in result) {
+                                    val slot = ChargingSlot(
+                                        id = document.id,
+                                        speed = document.data["speed"].toString(),
+                                        type = document.data["type"].toString()
+                                    )
+                                    viewModelScope.launch {
+                                        slotRepository.insert(slot)
+                                    }
+                                }
+                            }
+                            .addOnFailureListener { exception ->
+                                Log.w("Firebase", "Error getting slots.", exception)
+                            }
+                    }
                 }
             }
             .addOnFailureListener { exception ->
-                Log.w("Firebase", "Error getting documents.", exception)
+                Log.w("Firebase", "Error getting chargers.", exception)
             }
 
     }
