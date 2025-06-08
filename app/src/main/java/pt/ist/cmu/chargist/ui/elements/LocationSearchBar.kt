@@ -53,9 +53,13 @@ fun LocationSearchBar (
 
     var usingMyLocation by remember { mutableStateOf(true)}
     val myLocation by mapViewModel.userLocation
-    onLocationUpdate(myLocation) // ensure initial value is passed
+    if (usingMyLocation) {
+        Log.d("Search Location", "Initial location update with current location")
+        onLocationUpdate(myLocation) // ensure initial value is passed
+    }
 
     val onSearch = { address: Address? ->
+        Log.d("Search Location", "Location update from search of address $address")
         address?.let {
             val text = address.getAddressLine(0)?:address.toString()
             textFieldState.edit { replace(0, length, text) }
@@ -65,12 +69,14 @@ fun LocationSearchBar (
     }
     val setUseSearchLocation = {
         if (locationResults.isNotEmpty()) {
+            Log.d("Search Location", "Location update from setting use search location for address ${locationResults[0]}")
             onSearch(locationResults[0])
             expanded = false
         } else
             Toast.makeText(context, "Enter location to  use for searching chargers", Toast.LENGTH_LONG).show()
     }
     val setUseMyLocation = {
+        Log.d("Search Location", "Location update with current location")
         onLocationUpdate(myLocation)
         expanded = false
         usingMyLocation = true
