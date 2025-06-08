@@ -133,7 +133,8 @@ fun HomeScreen(
     onCreateCharger: () -> Unit,
     onSearchClick: () -> Unit,
     appViewModel: AppViewModel = viewModel(),
-    mapViewModel: MapViewModel = viewModel()
+    mapViewModel: MapViewModel = viewModel(),
+    centerPoint: LatLng? = null
 ) {
 
     val chargers by appViewModel.allChargers.collectAsState()
@@ -188,7 +189,7 @@ fun HomeScreen(
                 )
         }
     ) { paddingValues ->
-        Map(paddingValues, chargers, slots, userLocation, onCreateCharger, mapViewModel, appViewModel)
+        Map(paddingValues, chargers, slots, userLocation, onCreateCharger, mapViewModel, appViewModel, centerPoint)
     }
 }
 
@@ -200,7 +201,8 @@ fun Map(
     userLocation: LatLng?,
     onCreateCharger: () -> Unit,
     mapViewModel: MapViewModel,
-    appViewModel: AppViewModel
+    appViewModel: AppViewModel,
+    centerPoint: LatLng?
 ) {
     var showChargerInformationPanel by remember { mutableStateOf(false) }
 
@@ -213,15 +215,17 @@ fun Map(
         val istCoords = LatLng(38.736766738322125, -9.139350512479778)
         var hasMovedCamera by remember { mutableStateOf(false) }
         val cameraPositionState = rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(istCoords, 15f)
+            position = CameraPosition.fromLatLngZoom(centerPoint?:istCoords, 15f) // center camera on passed center point/ IST
         }
 
         // If the app has location access, move the camera to user location
         LaunchedEffect(userLocation) {
             if (!hasMovedCamera && userLocation != null) {
-                cameraPositionState.animate(
-                    CameraUpdateFactory.newLatLngZoom(userLocation, 15f)
-                )
+                if (centerPoint == null) { // only go to location if no center point provided
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngZoom(userLocation, 15f)
+                    )
+                }
                 mapProperties = mapProperties.copy(isMyLocationEnabled = true)
                 hasMovedCamera =
                     true // only do this once so that the camera is not constantly following user

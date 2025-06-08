@@ -47,6 +47,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import coil.compose.AsyncImage
+import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.Firebase
 import pt.ist.cmu.chargist.ui.screens.HomeScreen
 import pt.ist.cmu.chargist.ui.screens.LoginScreen
@@ -166,7 +167,45 @@ fun AppNavigation() {
                     navController.navigate(Screen.Home.route)
                 },
                 searchViewModel,
-                mapViewModel
+                mapViewModel,
+                onResultClick = { centerPoint: LatLng ->
+                    navController.navigate(Screen.MapPoint.createRoute(centerPoint))
+                }
+            )
+        }
+        composable (
+            route = Screen.MapPoint.route,
+            arguments = listOf(
+                navArgument("lat") { type=NavType.FloatType },
+                navArgument("lng") { type=NavType.FloatType }
+            )
+        ) { backStackEntry ->
+            val lat = backStackEntry.arguments?.getFloat("lat")
+            val lng = backStackEntry.arguments?.getFloat("lng")
+            val centerPoint = if (lat == null || lng == null) null else LatLng(lat.toDouble(),lng.toDouble())
+
+            // Scope the ViewModel to the "home" route
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.Home.route)
+            }
+
+            // these are the shared view models
+            val appViewModel = viewModel<AppViewModel>(parentEntry)
+            val mapViewModel = viewModel<MapViewModel>(parentEntry)
+
+            HomeScreen(
+                onAccountClick = {
+                    navController.navigate(Screen.Account.route)
+                },
+                onCreateCharger = {
+                    navController.navigate(Screen.CreateCharger.route)
+                },
+                appViewModel = appViewModel,
+                mapViewModel = mapViewModel,
+                onSearchClick = {
+                    navController.navigate(Screen.Search.route)
+                },
+                centerPoint = centerPoint
             )
         }
         composable(

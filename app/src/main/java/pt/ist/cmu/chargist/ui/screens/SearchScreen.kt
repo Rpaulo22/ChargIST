@@ -70,9 +70,15 @@ import com.google.firebase.firestore.GeoPoint
 import android.location.Address
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocationDisabled
 import androidx.compose.material.icons.filled.LocationSearching
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -83,6 +89,7 @@ import com.google.android.play.integrity.internal.s
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.ui.elements.LocationSearchBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
@@ -95,13 +102,15 @@ fun SearchScreen(
     onAccountClick: () -> Unit,
     onHomeClick: () -> Unit,
     searchViewModel: SearchViewModel = viewModel(),
-    mapViewModel: MapViewModel = viewModel()
+    mapViewModel: MapViewModel = viewModel(),
+    onResultClick: (point: LatLng) -> Unit
 ) {
     SearchScreenContent(
         goToHomeScreen = onHomeClick,
         goToAccountScreen = onAccountClick,
         searchViewModel = searchViewModel,
-        mapViewModel = mapViewModel
+        mapViewModel = mapViewModel,
+        onResultClick = onResultClick
     )
 }
 
@@ -111,8 +120,11 @@ private fun SearchScreenContent (
     goToAccountScreen: () -> Unit,
     goToHomeScreen: () -> Unit,
     searchViewModel: SearchViewModel = viewModel(),
-    mapViewModel: MapViewModel = viewModel()
+    mapViewModel: MapViewModel = viewModel(),
+    onResultClick: (point: LatLng) -> Unit
 ) {
+
+    var searchResult by remember { mutableStateOf(listOf<Charger>())}
 
     var showSortDialog by remember { mutableStateOf(false) }
     var showFilterDialog by remember { mutableStateOf(false) }
@@ -130,6 +142,11 @@ private fun SearchScreenContent (
     var filterTravelTimeMin: Double = 0.0
     var filterTravelTimeMax: Double = 500.0
 
+    val onSearchChargers = { chargers: List<Charger> ->
+        Log.d("Search Charger", "Search Result: $chargers")
+        searchResult = chargers
+        Unit
+    }
     val onLocationUpdate = { latLng: LatLng? -> location = latLng }
     val onSort = { showSortDialog = true }
     val onFilter = { showFilterDialog = true }
@@ -196,16 +213,64 @@ private fun SearchScreenContent (
                     }
                 }
 
-                Button(
-                    onClick = {
-                        Log.d("Search Charger", location.toString())
-                        if (location != null) {
-                            val l = location!!
-                            searchViewModel.ttWrapper(l)
+                Box (Modifier.fillMaxSize()) {
+                    Column (
+                        Modifier.fillMaxWidth()
+                            .align(Alignment.TopCenter)
+                            .padding(8.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        searchResult.forEach { charger ->
+                            HorizontalDivider()
+                            Row (
+                                Modifier.fillMaxWidth()
+                                    .clickable { onResultClick(LatLng(charger.latitude, charger.longitude)) }
+                                    .padding(8.dp)
+                            ) {
+                                Text("${charger.name}")
+                            }
+                            Spacer(Modifier.padding(8.dp))
                         }
+                        Spacer(Modifier.padding(128.dp))
                     }
-                ) {
-                    Text("AAAAAA")
+
+                    IconButton(
+                        onClick = {
+                            Log.d("Search Charger", "Searching charger from $location")
+                            if (location != null) {
+                                val loc = location!!
+                                searchViewModel.searchChargers (
+                                    onSearchChargers,
+                                    loc,
+                                    sortBy,
+                                    filterSpeed,
+                                    filterDistanceMin,
+                                    filterDistanceMax,
+                                    filterPriceMin,
+                                    filterPriceMax,
+                                    filterTravelTimeMin,
+                                    filterTravelTimeMax,
+                                    requireMbWay,
+                                    requireCreditCard,
+                                    requireCash
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 6.dp, bottom = 32.dp)
+                            .background(MaterialTheme.colorScheme.background, shape = CircleShape)
+                            .border(2.dp, mainColor, CircleShape)
+                            .size(56.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Search charger",
+                            modifier = Modifier.size(40.dp),
+                            tint = mainColor
+                        )
+
+                    }
                 }
             }
         }
@@ -725,5 +790,5 @@ fun TravelTimeFilter (
 @Preview
 @Composable
 fun SearchScreenPreview() {
-    SearchScreen({}, {})
+    SearchScreen({}, {}, onResultClick = {})
 }

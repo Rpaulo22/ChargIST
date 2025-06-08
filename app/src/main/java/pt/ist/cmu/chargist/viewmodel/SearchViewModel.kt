@@ -6,6 +6,8 @@ import android.location.Address
 import android.location.Geocoder
 import android.location.Location
 import android.util.Log
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
@@ -13,7 +15,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.flow.toCollection
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -22,6 +29,7 @@ import org.json.JSONObject
 import pt.ist.cmu.chargist.BuildConfig
 import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Charger
+import pt.ist.cmu.chargist.model.data.ChargerDao
 import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
@@ -31,7 +39,8 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
     private val chargerRepository: ChargerRepository
     private val slotRepository: ChargingSlotRepository
     val allChargers: StateFlow<List<Charger>>
-    val allChargingSlots: StateFlow<List<ChargingSlot>>
+
+    val travelTimes = mutableMapOf<LatLng, Pair<LatLng, Float>>() // marker location -> <user location, travel time>
 
     init {
         val chargerDao = AppDatabase.getDatabase(application).chargerDao()
@@ -39,11 +48,6 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
         chargerRepository = ChargerRepository(chargerDao)
         slotRepository = ChargingSlotRepository(chargingSlotDao)
         allChargers = chargerRepository.allChargers.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            emptyList()
-        )
-        allChargingSlots = slotRepository.allChargingSlots.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
             emptyList()
@@ -91,6 +95,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun searchChargers (
+        onSearch: (List<Charger>) -> Unit,
         location: LatLng,
         sortBy: String,
         filterSpeed: Int,
@@ -104,13 +109,134 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
         requireCreditCard: Boolean,
         requireCash: Boolean
     ) {
+        viewModelScope.launch {
+            // Não faço ideia porquê, mas isto faz o primeiro collect com o estado inicial se a lista estiver vazia faz-se duas vezes e está resolvido, se de facto estiver vazio, também não se perde nada
+            val n = if (allChargers.value.isEmpty()) 2 else 1
+            allChargers.take(n).collect { chargers ->
+                // Atualizar carregadores em torno da localização
+                // TODO: try to update local DB from firebase, query local DB regardless
 
-        // Atualizar carregadores em torno da localização
-        // TODO: try to update local DB from firebase, query local DB regardless
+                // BD local
 
-        // Filtrar conteúdo da BD local
+                Log.d("Search Charger", "AllChargers=" + chargers)
 
+                // Chamadas à API para obter tempo de viagem
+                val pointsToCalc = mutableListOf<LatLng>()
+                for (charger in chargers) {
+                    val loc = LatLng(charger.latitude, charger.longitude)
+                    if (
+                        travelTimes.get(loc) == null || // not calculated
+                        calcDistance(
+                            travelTimes.get(loc)!!.first,
+                            location
+                        ) > 2  // old calculation (2km away from calculated point)
+                    ) {
+                        pointsToCalc.add(loc)
 
+                        if (pointsToCalc.size == 25) { // API call supports only 25 locations, needs to be batched
+                            calcTravelTimes(location, pointsToCalc)
+                            pointsToCalc.clear()
+                        }
+                    }
+                }
+
+                if (pointsToCalc.isNotEmpty()) {
+                    calcTravelTimes(location, pointsToCalc)
+                }
+
+                Log.d("Search Charger", "TravelTimes=" + travelTimes.toString())
+
+                // Filtrar conteúdo da BD local
+                val filteredChargers = chargers
+                    // Payment method
+                    .filter { c ->
+                        !(requireMbWay && !c.mbWay) // require => has
+                    }.filter { c ->
+                        !(requireCreditCard && !c.creditCard) // require => has
+                    }.filter { c ->
+                        !(requireCash && !c.cash) // require => has
+                    }
+                    // Price
+                    .filter { c ->
+                        val p = priceForSpeed(c, filterSpeed)
+                        minPrice <= p && p <= maxPrice
+                    }
+                    // Distance
+                    .filter { c ->
+                        val d = calcDistance(LatLng(c.latitude, c.longitude), location)
+                        minDistance <= d && d <= maxDistance
+                    }
+                    // Travel Time
+                    .filter { c ->
+                        val t = getTravelTime(location, LatLng(c.latitude, c.longitude))
+                        minTravelTime <= t && t <= maxTravelTime
+                    }
+                    // Charging Speed
+                    .filter { c ->
+                        hasChargingSpeed(c, filterSpeed)
+                    }
+
+                Log.d("Search Charger", "FilteredChargers=" + filteredChargers.toString())
+
+                // Ordenar a lista
+                val sortedChargers = when (sortBy) {
+                    "Distance" -> filteredChargers.sortedBy { c ->
+                        calcDistance(
+                            LatLng(
+                                c.latitude,
+                                c.longitude
+                            ), location
+                        )
+                    }
+
+                    "Price" -> filteredChargers.sortedBy { c -> priceForSpeed(c, filterSpeed) }
+                    "Travel Time" -> filteredChargers.sortedBy { c ->
+                        getTravelTime(
+                            location,
+                            LatLng(c.latitude, c.longitude)
+                        )
+                    }
+                    //"Availability" -> 0 // TODO: quando/se AVAILIBILITY?
+                    else -> filteredChargers
+                }
+
+                onSearch(sortedChargers)
+            }
+        }
+    }
+
+    private fun getSlotSpeed(slot: ChargingSlot): Int {
+        return when (slot.speed) {
+            "Slow" -> 0
+            "Medium" -> 1
+            "Fast" -> 2
+            else -> -1
+        }
+    }
+
+    private suspend fun hasChargingSpeed(c: Charger, speed: Int): Boolean {
+        Log.d("Search Charger", "Charging speed $speed check for charger $c")
+        val slotsFlow = slotRepository.getSlots(c.chargingSlots)
+        var result = false
+        slotsFlow.take(1).collect { slots ->
+            Log.d("Search Charger", "Charging speed check for slots $slots")
+            for (slot in slots) {
+                if (getSlotSpeed(slot) >= speed) {
+                    result = true
+                    break
+                }
+            }
+        }
+        return result
+    }
+
+    private fun priceForSpeed(c: Charger, s: Int): Double { // TODO: isto devia estar no âmbito da class Charger, mas paciência, provavelmente não vai lá parar
+        when (s) {
+            0 -> return c.priceSlow
+            1 -> return c.priceMedium
+            2 -> return c.priceFast
+        }
+        return Double.MAX_VALUE
     }
 
     private fun calcDistance(loc1: LatLng, loc2: LatLng): Float {
@@ -123,16 +249,31 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
         return results[0]/1000 // result in km
     }
 
-    val travelTimes = mapOf<LatLng, Pair<LatLng, Float>>() // marker location -> <user location, travel time>
-
-    private fun getTravelTime(origin: LatLng, destinations: List<LatLng>): Float {
-        return 0f
+    private fun getTravelTime(origin: LatLng, destination: LatLng): Float {
+        if (
+            travelTimes.get(destination) == null || // not calculated
+            calcDistance(travelTimes.get(destination)!!.first, origin) > 2  // old calculation (2km away from calculated point)
+        ) {
+            return Float.MAX_VALUE
+        }
+        return travelTimes.get(destination)!!.second
     }
 
-    suspend fun calcTravelTimes(
+    suspend fun calcTravelTimes(origin: LatLng, destinations: List<LatLng>) {
+        val times = travelTimeApiCall(origin, destinations)
+        for (i in 0..times.size-1) {
+            val t = times[i]
+            val d = destinations[i]
+            if (t != null) {
+                travelTimes.put(d, Pair(origin, t))
+            }
+        }
+    }
+
+    suspend fun travelTimeApiCall(
         origin: LatLng,
         destinations: List<LatLng>
-    ): List<Int?> = withContext(Dispatchers.IO) {
+    ): List<Float?> = withContext(Dispatchers.IO) {
         // launch a coroutine to execute http request (http requests can't be executed on main thread)
         val client = OkHttpClient()
         val apiKey = BuildConfig.MAPS_API_KEY
@@ -159,7 +300,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                         val element = elements.getJSONObject(i)
                         if (element.getString("status") == "OK") {
                             Log.d("Search Charger", "Response $i OK")
-                            element.getJSONObject("duration").getInt("value") / 60 // in minutes
+                            element.getJSONObject("duration").getInt("value") / 60f // in minutes
                         } else null
                     }
                 }
@@ -170,13 +311,6 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
         } catch (e: Exception) {
             Log.e("Network", "Error: ${e.message}")
             List(destinations.size) { null }
-        }
-    }
-
-    fun ttWrapper(location: LatLng) {
-        viewModelScope.launch {
-            val a = calcTravelTimes(location, listOf(LatLng(38.73623592881426, -9.160385500848275),LatLng(38.85897702376556, -9.141703572111687),LatLng(39.08149326408465, -9.255457320651415)))
-            Log.d("Search Charger", "Travel Times = $a")
         }
     }
 }
