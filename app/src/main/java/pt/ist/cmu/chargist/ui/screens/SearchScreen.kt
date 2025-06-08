@@ -118,7 +118,7 @@ private fun SearchScreenContent (
     var showFilterDialog by remember { mutableStateOf(false) }
 
     var location: LatLng? = null
-    var sortBy: String = "Charging Speed"
+    var sortBy: String = "Distance"
     var requireMbWay = false
     var requireCreditCard = false
     var requireCash = false
@@ -377,11 +377,11 @@ fun FilterDialog(
 }
 
 @Composable
-fun SortOptionsDropdown(onOptionChange: (String) -> Unit, onComplete: () -> Unit, savedText: String? = null) {
+fun SortOptionsDropdown(onOptionChange: (String) -> Unit, onComplete: () -> Unit, savedText: String) {
     var mExpanded by remember { mutableStateOf(true) }
 
-    val mOptions = listOf("Charging Speed", "Distance", "Price", "Travel Time", "Availability") /*TODO: pôr a Availability pela ordem alfabética caso ela chegue a ser implementada*/
-    var mSelectedText by remember { mutableStateOf(savedText?:"Charging Speed") }
+    val mOptions = listOf("Distance", "Price", "Travel Time", "Availability") /*TODO: pôr a Availability pela ordem alfabética caso ela chegue a ser implementada*/
+    var mSelectedText by remember { mutableStateOf(savedText) }
     var mTextFieldSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero)}
 
     onOptionChange(mSelectedText) // This is redundant every time except the first when there is no previous option
