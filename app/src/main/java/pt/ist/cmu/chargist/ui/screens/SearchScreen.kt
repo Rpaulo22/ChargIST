@@ -123,6 +123,7 @@ private fun SearchScreenContent (
     mapViewModel: MapViewModel = viewModel(),
     onResultClick: (point: LatLng) -> Unit
 ) {
+    val context = LocalContext.current
 
     var searchResult by remember { mutableStateOf(listOf<Pair<Charger,String>>())}
 
@@ -260,6 +261,9 @@ private fun SearchScreenContent (
                                     requireCreditCard,
                                     requireCash
                                 )
+                            }
+                            else {
+                                Toast.makeText(context, "Please select a location or turn on location before searching!", Toast.LENGTH_LONG).show()
                             }
                         },
                         modifier = Modifier
