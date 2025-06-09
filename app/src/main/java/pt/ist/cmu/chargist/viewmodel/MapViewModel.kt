@@ -4,6 +4,7 @@ import pt.ist.cmu.chargist.BuildConfig
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.location.Location
 import android.os.Looper
 import android.util.Log
@@ -29,6 +30,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import pt.ist.cmu.chargist.model.data.Charger
+import java.util.Locale
 
 class MapViewModel: ViewModel() {
 
@@ -38,34 +40,37 @@ class MapViewModel: ViewModel() {
 
     var currentAddress by mutableStateOf("")
 
-    // Based on current location, uses google maps api to get the address
-    fun fetchAddress() {
-        if (userLocation.value != null) {
-            viewModelScope.launch { currentAddress = getAddress(userLocation.value!!)}}
+    // Based on current location, uses geocoder api to get the address
+    fun fetchAddress(context: Context) {
+        val location = userLocation.value
+        if (location != null) {
+            viewModelScope.launch {
+                currentAddress = getAddress(context, location)
+            }
+        }
     }
 
-    suspend fun getAddress(location: LatLng): String = withContext(Dispatchers.IO) {
-        val lat = location.latitude
-        val lng = location.longitude
-
-        val client = OkHttpClient()
-        val apiKey = BuildConfig.MAPS_API_KEY
-        val url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey"
-
+    suspend fun getAddress(context: Context, location: LatLng): String = withContext(Dispatchers.IO) {
         try {
-            val request = Request.Builder().url(url).build()
-            val response = client.newCall(request).execute()
+            val geocoder = Geocoder(context, Locale.getDefault())
+            val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
 
-            if (response.isSuccessful) {
-                val json = JSONObject(response.body?.string() ?: "")
-                json.getJSONArray("results")
-                    .getJSONObject(0)
-                    .getString("formatted_address")
+            if (!addresses.isNullOrEmpty()) {
+                val address = addresses[0]
+                listOfNotNull(
+                    address.featureName,
+                    address.thoroughfare,
+                    address.subLocality,
+                    address.locality,
+                    address.subAdminArea,
+                    address.adminArea,
+                    address.countryName
+                ).joinToString(", ")
             } else {
                 "Unknown address"
             }
         } catch (e: Exception) {
-            Log.e("Network", "Error: ${e.message}")
+            Log.e("Geocoder", "Error: ${e.message}")
             "Error retrieving address"
         }
     }

@@ -58,6 +58,7 @@ import com.google.android.gms.maps.model.LatLng
 import okhttp3.Request
 import org.json.JSONObject
 import pt.ist.cmu.chargist.model.data.ChargingSlot
+import pt.ist.cmu.chargist.ui.elements.LocationSearchBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
@@ -76,9 +77,6 @@ fun CreateChargerForm(
 
     val userLocation = mapViewModel.userLocation
 
-    LaunchedEffect(userLocation) { mapViewModel.fetchAddress() } // update address of current location
-
-
     var showDialog by remember { mutableStateOf(false) }
 
     var chargerName by remember { mutableStateOf("") }
@@ -92,186 +90,205 @@ fun CreateChargerForm(
     var priceSlow = priceSlowInput.replace(",", ".").toDoubleOrNull()
     var priceMedium = priceMediumInput.replace(",", ".").toDoubleOrNull()
     var priceFast = priceFastInput.replace(",", ".").toDoubleOrNull()
-    val latitude = userLocation.value?.latitude
-    val longitude= userLocation.value?.longitude
-
+    var latitude = userLocation.value?.latitude
+    var longitude = userLocation.value?.longitude
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(8.dp),
+            .padding(horizontal = 8.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.size(30.dp))
-        Text(text = "Creating new Charger", fontWeight = FontWeight.Bold, fontSize = 34.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-        Spacer(Modifier.size(20.dp))
-        OutlinedTextField(
-            value = chargerName,
-            onValueChange = {chargerName = it},
-            label = {Text("Charger Name")}
-        )
-        Spacer(Modifier.size(20.dp))
-
-        Button(
-            onClick = { showDialog = true },
-            colors = ButtonColors(mainColor, Color.White, Color.Transparent, Color.LightGray),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "add")
-                Text(text = "Add Charging Slots")
-            }
-        }
-        Text("Current slots:")
-        chargingSlots.forEach {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("• ${it.speed} - ${it.type}")
-                IconButton(
-                    onClick = {chargingSlots.remove(it)}
-                ) {
-                    Icon(
-                        Icons.Default.Cancel,
-                        contentDescription = "Remove Slot",
-                        tint = mainColor
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.size(5.dp))
-        HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
-        Spacer(Modifier.size(5.dp))
-
-        Text("Payment Methods", fontSize = 24.sp)
-        Spacer(Modifier.size(4.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("MbWay")
-                Switch(
-                    checked = mbWay,
-                    onCheckedChange = { mbWay = it },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = mainColor,
-                        checkedTrackColor = mainColor.copy(alpha = 0.5f),
-                        uncheckedThumbColor = Color.Gray,
-                        uncheckedTrackColor = Color.LightGray
-                    )
-                )
-            }
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Credit Card")
-                Switch(
-                    checked = creditCard,
-                    onCheckedChange = {creditCard = it},
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = mainColor,
-                        checkedTrackColor = mainColor.copy(alpha = 0.5f),
-                        uncheckedThumbColor = Color.Gray,
-                        uncheckedTrackColor = Color.LightGray
-                    )
-                )
-            }
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Cash")
-                Switch(
-                    checked = cash,
-                    onCheckedChange = { cash = it },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = mainColor,
-                        checkedTrackColor = mainColor.copy(alpha = 0.5f),
-                        uncheckedThumbColor = Color.Gray,
-                        uncheckedTrackColor = Color.LightGray
-                    )
-                )
-            }
-        }
-
-        Spacer(Modifier.size(5.dp))
-        HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
-        Spacer(Modifier.size(5.dp))
-
-        Text("Prices", fontSize = 24.sp)
-        Spacer(Modifier.size(6.dp))
-        TextField(
-            value = priceSlowInput,
-            onValueChange = { priceSlowInput = it },
-            label = { Text("Slow Price") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            suffix = { Text("€/kWh") }
-        )
-        Spacer(Modifier.size(4.dp))
-        TextField(
-            value = priceMediumInput,
-            onValueChange = { priceMediumInput = it },
-            label = { Text("Medium Price") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            suffix = { Text("€/kWh") }
-        )
-        Spacer(Modifier.size(4.dp))
-        TextField(
-            value = priceFastInput,
-            onValueChange = { priceFastInput = it },
-            label = { Text("Fast Price") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            suffix = { Text("€/kWh") }
-        )
-        Spacer(modifier = Modifier.size(16.dp))
-        Text("This charger will be placed at:\n${mapViewModel.currentAddress}", textAlign = TextAlign.Center)
         Spacer(Modifier.size(10.dp))
-
-        Button(
-            onClick = {
-                try {
-                    appViewModel.createCharger(
-                        name = chargerName,
-                        slots = chargingSlots,
-                        creditCard = creditCard,
-                        cash = cash,
-                        mbWay = mbWay,
-                        priceFast = priceFast?: 0.0,
-                        priceMedium = priceMedium?: 0.0,
-                        priceSlow = priceSlow?: 0.0,
-                        lat = latitude?:0.0,
-                        lng = longitude?:0.0
-                    )
-                    onCreateClick()
-                }
-                catch (e: Exception) {
-                    Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
-                }
-            },
-            colors = ButtonColors(mainColor, Color.White, Color.Transparent, Color.LightGray)
-        ) { Text("Create new Charger") }
-        Spacer(Modifier.size(30.dp))
-    }
-    if (showDialog) {
-        AddChargingSlotDialog(
-            onDismiss = { showDialog = false },
-            onConfirm = {
-                chargingSlots.add(it)
-                Log.d("Slots", "Added $it")
-            }
+        Text(
+            text = "Creating new Charger",
+            fontWeight = FontWeight.Bold,
+            fontSize = 34.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
         )
+        Spacer(Modifier.size(10.dp))
+        Text("This charger will be placed at:")
+        LocationSearchBar(
+            onLocationUpdate = {
+                latitude = it?.latitude
+                longitude = it?.longitude
+            },
+            mapViewModel = mapViewModel
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            OutlinedTextField(
+                value = chargerName,
+                onValueChange = { chargerName = it },
+                label = { Text("Charger Name") }
+            )
+            Spacer(Modifier.size(20.dp))
+
+            Button(
+                onClick = { showDialog = true },
+                colors = ButtonColors(mainColor, Color.White, Color.Transparent, Color.LightGray),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "add")
+                    Text(text = "Add Charging Slots")
+                }
+            }
+            Text("Current slots:")
+            chargingSlots.forEach {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("• ${it.speed} - ${it.type}")
+                    IconButton(
+                        onClick = { chargingSlots.remove(it) }
+                    ) {
+                        Icon(
+                            Icons.Default.Cancel,
+                            contentDescription = "Remove Slot",
+                            tint = mainColor
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.size(5.dp))
+            HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
+            Spacer(Modifier.size(5.dp))
+
+            Text("Payment Methods", fontSize = 24.sp)
+            Spacer(Modifier.size(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("MbWay")
+                    Switch(
+                        checked = mbWay,
+                        onCheckedChange = { mbWay = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = mainColor,
+                            checkedTrackColor = mainColor.copy(alpha = 0.5f),
+                            uncheckedThumbColor = Color.Gray,
+                            uncheckedTrackColor = Color.LightGray
+                        )
+                    )
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Credit Card")
+                    Switch(
+                        checked = creditCard,
+                        onCheckedChange = { creditCard = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = mainColor,
+                            checkedTrackColor = mainColor.copy(alpha = 0.5f),
+                            uncheckedThumbColor = Color.Gray,
+                            uncheckedTrackColor = Color.LightGray
+                        )
+                    )
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Cash")
+                    Switch(
+                        checked = cash,
+                        onCheckedChange = { cash = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = mainColor,
+                            checkedTrackColor = mainColor.copy(alpha = 0.5f),
+                            uncheckedThumbColor = Color.Gray,
+                            uncheckedTrackColor = Color.LightGray
+                        )
+                    )
+                }
+            }
+
+            Spacer(Modifier.size(5.dp))
+            HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
+            Spacer(Modifier.size(5.dp))
+
+            Text("Prices", fontSize = 24.sp)
+            Spacer(Modifier.size(6.dp))
+            TextField(
+                value = priceSlowInput,
+                onValueChange = { priceSlowInput = it },
+                label = { Text("Slow Price") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                suffix = { Text("€/kWh") }
+            )
+            Spacer(Modifier.size(4.dp))
+            TextField(
+                value = priceMediumInput,
+                onValueChange = { priceMediumInput = it },
+                label = { Text("Medium Price") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                suffix = { Text("€/kWh") }
+            )
+            Spacer(Modifier.size(4.dp))
+            TextField(
+                value = priceFastInput,
+                onValueChange = { priceFastInput = it },
+                label = { Text("Fast Price") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                suffix = { Text("€/kWh") }
+            )
+            Spacer(modifier = Modifier.size(24.dp))
+
+
+            Button(
+                onClick = {
+                    try {
+                        appViewModel.createCharger(
+                            name = chargerName,
+                            slots = chargingSlots,
+                            creditCard = creditCard,
+                            cash = cash,
+                            mbWay = mbWay,
+                            priceFast = priceFast ?: 0.0,
+                            priceMedium = priceMedium ?: 0.0,
+                            priceSlow = priceSlow ?: 0.0,
+                            lat = latitude ?: 0.0,
+                            lng = longitude ?: 0.0
+                        )
+                        onCreateClick()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
+                    }
+                },
+                colors = ButtonColors(mainColor, Color.White, Color.Transparent, Color.LightGray)
+            ) { Text("Create new Charger") }
+            Spacer(Modifier.size(30.dp))
+        }
+        if (showDialog) {
+            AddChargingSlotDialog(
+                onDismiss = { showDialog = false },
+                onConfirm = {
+                    chargingSlots.add(it)
+                    Log.d("Slots", "Added $it")
+                }
+            )
+        }
     }
 }
 

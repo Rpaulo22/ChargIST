@@ -124,7 +124,7 @@ private fun SearchScreenContent (
     onResultClick: (point: LatLng) -> Unit
 ) {
 
-    var searchResult by remember { mutableStateOf(listOf<Charger>())}
+    var searchResult by remember { mutableStateOf(listOf<Pair<Charger,String>>())}
 
     var showSortDialog by remember { mutableStateOf(false) }
     var showFilterDialog by remember { mutableStateOf(false) }
@@ -142,9 +142,10 @@ private fun SearchScreenContent (
     var filterTravelTimeMin: Double = 0.0
     var filterTravelTimeMax: Double = 500.0
 
-    val onSearchChargers = { chargers: List<Charger> ->
-        Log.d("Search Charger", "Search Result: $chargers")
-        searchResult = chargers
+    val onSearchChargers = {
+        chargerDistancePair: List<Pair<Charger, String>> ->
+        Log.d("Search Charger", "Search Result: $chargerDistancePair")
+        searchResult = chargerDistancePair
         Unit
     }
     val onLocationUpdate = { latLng: LatLng? -> location = latLng }
@@ -179,7 +180,7 @@ private fun SearchScreenContent (
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background),
                         shape = RoundedCornerShape(30),
                         border = BorderStroke(2.dp, mainColor),
-                        contentPadding = PaddingValues(horizontal = 56.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 40.dp, vertical = 8.dp),
                         modifier = Modifier.wrapContentSize()
                     ) {
                         Icon(
@@ -199,7 +200,7 @@ private fun SearchScreenContent (
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background),
                         shape = RoundedCornerShape(30),
                         border = BorderStroke(2.dp, mainColor),
-                        contentPadding = PaddingValues(horizontal = 56.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 40.dp, vertical = 8.dp),
                         modifier = Modifier.wrapContentSize()
                     ) {
                         Icon(
@@ -220,14 +221,19 @@ private fun SearchScreenContent (
                             .padding(8.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        searchResult.forEach { charger ->
+                        searchResult.forEach { element ->
+                            val charger = element.first
+                            val info = element.second
                             HorizontalDivider()
                             Row (
                                 Modifier.fillMaxWidth()
                                     .clickable { onResultClick(LatLng(charger.latitude, charger.longitude)) }
-                                    .padding(8.dp)
+                                    .padding(8.dp),
+
                             ) {
-                                Text("${charger.name}")
+                                Text(charger.name)
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text(info)
                             }
                             Spacer(Modifier.padding(8.dp))
                         }
@@ -257,8 +263,8 @@ private fun SearchScreenContent (
                             }
                         },
                         modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = 6.dp, bottom = 32.dp)
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 8.dp, bottom = 32.dp)
                             .background(MaterialTheme.colorScheme.background, shape = CircleShape)
                             .border(2.dp, mainColor, CircleShape)
                             .size(56.dp)

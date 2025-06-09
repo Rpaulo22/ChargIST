@@ -33,6 +33,8 @@ import pt.ist.cmu.chargist.model.data.ChargerDao
 import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
+import java.util.Locale
+import kotlin.math.round
 
 class SearchViewModel(application: Application) : AndroidViewModel(application) {
     val locationSearchResults = MutableStateFlow(listOf<Address>())
@@ -95,7 +97,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun searchChargers (
-        onSearch: (List<Charger>) -> Unit,
+        onSearch: (List<Pair<Charger, String>>) -> Unit,
         location: LatLng,
         sortBy: String,
         filterSpeed: Int,
@@ -200,7 +202,30 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                     else -> filteredChargers
                 }
 
-                onSearch(sortedChargers)
+                val pairList = when (sortBy) {
+                    "Distance" -> sortedChargers.map {
+                        val distance = String.format(Locale.ENGLISH, "%.2f", calcDistance(LatLng(it.latitude, it.longitude), location)) // distance as a string with 2 decimals
+                        Pair(it, "$distance km")
+                    }
+                    "Price" -> sortedChargers.map {
+                        val price = String.format(Locale.ENGLISH, "%.2f", priceForSpeed(it, filterSpeed)) // price as a string with 2 decimals
+                        Pair(it, "$price €/kWh")
+                    }
+                    "Travel Time" -> sortedChargers.map {
+                        val time = getTravelTime(location, LatLng(it.latitude, it.longitude)).toInt()
+                        val hours = time / 60
+                        val minutes = time % 60
+                        Pair(it, "${hours}h${minutes}m")
+                    }
+
+                    //"Availability" -> 0 // TODO: quando/se AVAILIBILITY?
+
+                    else -> sortedChargers.map {
+                        Pair(it, "")
+                    }
+                }
+
+                onSearch(pairList)
             }
         }
     }
