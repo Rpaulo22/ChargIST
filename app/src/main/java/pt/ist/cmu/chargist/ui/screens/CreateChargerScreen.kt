@@ -95,8 +95,8 @@ fun CreateChargerForm(
     var priceSlow = priceSlowInput.replace(",", ".").toDoubleOrNull()
     var priceMedium = priceMediumInput.replace(",", ".").toDoubleOrNull()
     var priceFast = priceFastInput.replace(",", ".").toDoubleOrNull()
-    var latitude = userLocation.value?.latitude
-    var longitude = userLocation.value?.longitude
+    var latitude by remember { mutableStateOf(userLocation.value?.latitude) }
+    var longitude by remember { mutableStateOf(userLocation.value?.longitude) }
 
     Column(
         modifier = Modifier
@@ -117,6 +117,7 @@ fun CreateChargerForm(
         Text("This charger will be placed at:")
         LocationSearchBar(
             onLocationUpdate = {
+                Log.d("LocationUpdate", "$it")
                 latitude = it?.latitude
                 longitude = it?.longitude
             },
@@ -264,6 +265,7 @@ fun CreateChargerForm(
             Button(
                 onClick = {
                     try {
+                        Log.d("LocationUpdate", "lat:$latitude | long:$longitude")
                         appViewModel.createCharger(
                             name = chargerName,
                             ownerId = uid,
