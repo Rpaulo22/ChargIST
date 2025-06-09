@@ -85,6 +85,7 @@ fun LocationSearchBar (
             val text = address.getAddressLine(0)?:address.toString()
             textFieldState.edit { replace(0, length, text) }
             onLocationUpdate(LatLng(address.latitude, address.longitude))
+            Log.d("LocationUpdate", "address: $address")
             usingMyLocation = false
             Toast.makeText(context, "Using search bar location", Toast.LENGTH_SHORT).show()
         }
