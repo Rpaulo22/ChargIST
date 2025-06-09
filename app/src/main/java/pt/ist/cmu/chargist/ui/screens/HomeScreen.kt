@@ -418,7 +418,7 @@ fun ChargerInformationPanel(
     var chargerAddress by remember { mutableStateOf("Loading...") }
 
     LaunchedEffect(Unit) { // launch  coroutine to obtain charger address
-        chargerAddress = mapViewModel.getAddress(LatLng(charger.latitude,charger.longitude))
+        chargerAddress = mapViewModel.getAddress(context, LatLng(charger.latitude,charger.longitude))
     }
 
     var favourite by remember { mutableStateOf(charger.id in favourites)}

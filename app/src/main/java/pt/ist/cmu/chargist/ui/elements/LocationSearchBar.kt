@@ -14,6 +14,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationDisabled
 import androidx.compose.material.icons.filled.LocationSearching
 import androidx.compose.material.icons.filled.MyLocation
@@ -23,6 +25,7 @@ import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.LatLng
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
@@ -43,13 +47,26 @@ import kotlin.math.exp
 @Composable
 fun LocationSearchBar (
     onLocationUpdate: (LatLng?) -> Unit,
-    searchViewModel: SearchViewModel,
+    searchViewModel: SearchViewModel = viewModel(),
     mapViewModel: MapViewModel
 ) {
+    val context = LocalContext.current
+    val address = mapViewModel.currentAddress
+    LaunchedEffect(Unit) { // get current address when loading for first time
+        mapViewModel.fetchAddress(context)
+    }
+
     var textFieldState = remember { TextFieldState() }
+
+    // update the field when the address finally updates
+    LaunchedEffect(address) {
+        textFieldState.edit {
+            replace(0, length, address)
+        }
+    }
     var expanded by rememberSaveable { mutableStateOf(false) }
     val locationResults by searchViewModel.locationSearchResults.collectAsState()
-    val context = LocalContext.current
+
 
     var usingMyLocation by remember { mutableStateOf(true)}
     val myLocation by mapViewModel.userLocation
@@ -58,13 +75,18 @@ fun LocationSearchBar (
         onLocationUpdate(myLocation) // ensure initial value is passed
     }
 
+    LaunchedEffect(Unit) {
+        Toast.makeText(context, "Using current location", Toast.LENGTH_SHORT).show()
+    }
+
     val onSearch = { address: Address? ->
         Log.d("Search Location", "Location update from search of address $address")
         address?.let {
             val text = address.getAddressLine(0)?:address.toString()
             textFieldState.edit { replace(0, length, text) }
             onLocationUpdate(LatLng(address.latitude, address.longitude))
-            usingMyLocation =  false
+            usingMyLocation = false
+            Toast.makeText(context, "Using search bar location", Toast.LENGTH_SHORT).show()
         }
     }
     val setUseSearchLocation = {
@@ -73,10 +95,11 @@ fun LocationSearchBar (
             onSearch(locationResults[0])
             expanded = false
         } else
-            Toast.makeText(context, "Enter location to  use for searching chargers", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Enter location to use for searching chargers", Toast.LENGTH_LONG).show()
     }
     val setUseMyLocation = {
         Log.d("Search Location", "Location update with current location")
+        Toast.makeText(context, "Using current location", Toast.LENGTH_SHORT).show()
         onLocationUpdate(myLocation)
         expanded = false
         usingMyLocation = true
@@ -86,9 +109,11 @@ fun LocationSearchBar (
         Log.d("Location Bar", "My Location: $myLocation")
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(
+        modifier = Modifier.fillMaxWidth()) {
         SearchBar(
-            modifier = Modifier.align(Alignment.CenterHorizontally),
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally),
             inputField = {
                 SearchBarDefaults.InputField(
                     query = textFieldState.text.toString(),
@@ -107,7 +132,7 @@ fun LocationSearchBar (
                     expanded = expanded,
                     onExpandedChange = { expanded = it },
                     placeholder = { Text("Search remote location") },
-                    trailingIcon = {
+                    leadingIcon = {
                         if (myLocation == null) { // No location
                             Icon(
                                 Icons.Default.LocationDisabled,
@@ -129,13 +154,23 @@ fun LocationSearchBar (
                             )
                         }
                     },
+                    trailingIcon = {
+                        Icon(
+                            Icons.Default.Cancel,
+                            "Use current location",
+                            Modifier.clickable {
+                                textFieldState.edit { replace(0, length, "") }
+                            }
+                        )
+                    }
                 )
             },
             expanded = expanded,
             onExpandedChange = { expanded = it },
         ) {
             Column(
-                Modifier.verticalScroll(rememberScrollState())
+                Modifier
+                    .verticalScroll(rememberScrollState())
             ) {
                 if (locationResults.isEmpty()) {
                     if (!textFieldState.text.toString().isEmpty())
@@ -147,12 +182,11 @@ fun LocationSearchBar (
                     locationResults.forEach { address ->
                         LocationResultItem(
                             searchViewModel,
-                            address,
-                            {
-                                onSearch(it)
-                                expanded = false
-                            }
-                        )
+                            address
+                        ) {
+                            onSearch(it)
+                            expanded = false
+                        }
                     }
                 }
             }
