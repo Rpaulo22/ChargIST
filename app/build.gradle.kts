@@ -125,6 +125,9 @@ dependencies {
 
     // Google maps Compose
     implementation(libs.maps.compose)
+
+    // Gson
+    implementation("com.google.code.gson:gson:2.11.0")
 }
 
 secrets {

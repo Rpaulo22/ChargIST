@@ -1,5 +1,6 @@
 package pt.ist.cmu.chargist.model.data
 
+import android.icu.text.MessagePattern.ArgType.SELECT
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -13,6 +14,9 @@ interface ChargerDao {
     @Query("SELECT * FROM charger ORDER BY id DESC")
     fun getAllChargers(): Flow<List<Charger>>
 
+    @Query("SELECT * FROM charger WHERE id = :chargerId LIMIT 1")
+    suspend fun getChargerById(chargerId: String): Charger
+
     @Insert(onConflict = REPLACE)
     suspend fun insertCharger(charger: Charger)
 
@@ -24,4 +28,5 @@ interface ChargerDao {
 
     @Query("DELETE FROM charger")
     suspend fun deleteRelevantChargers() // todo this function should only delete chargers in a certain radius
+
 }

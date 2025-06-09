@@ -155,7 +155,7 @@ fun LoginScreen(
             border = BorderStroke(2.dp, mainColor)
         ) { Text("Log In") }
         OutlinedButton(
-            onClick = goToHomeScreen,
+            onClick = { loginViewModel.continueAsGuest() },
             colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
             border = BorderStroke(2.dp, mainColor)

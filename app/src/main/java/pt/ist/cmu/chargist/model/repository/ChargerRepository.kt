@@ -7,6 +7,10 @@ import pt.ist.cmu.chargist.model.data.ChargerDao
 class ChargerRepository(private val chargerDao: ChargerDao) {
     val allChargers: Flow<List<Charger>> = chargerDao.getAllChargers()
 
+    suspend fun getChargerById(chargerId: String): Charger {
+        return chargerDao.getChargerById(chargerId)
+    }
+
     suspend fun insert(charger: Charger) {
         chargerDao.insertCharger(charger)
     }
@@ -22,4 +26,6 @@ class ChargerRepository(private val chargerDao: ChargerDao) {
     suspend fun deleteRelevantChargers() {
         chargerDao.deleteRelevantChargers()
     }
+
+
 }

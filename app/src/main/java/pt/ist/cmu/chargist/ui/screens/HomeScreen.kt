@@ -65,6 +65,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ComposableTarget
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -119,6 +120,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.LocationSource
 import com.google.android.gms.maps.LocationSource.OnLocationChangedListener
 import com.google.android.gms.maps.internal.ILocationSourceDelegate
+import com.google.firebase.auth.FirebaseAuth
 import com.google.maps.android.compose.ComposeMapColorScheme
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
@@ -403,6 +405,9 @@ fun ChargerInformationPanel(
     appViewModel: AppViewModel,
     favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K")
 ) {
+    val user = FirebaseAuth.getInstance().currentUser
+    val uid = user!!.uid
+
     val context = LocalContext.current
 
     if (charger == null) {
@@ -421,9 +426,41 @@ fun ChargerInformationPanel(
     val slotsFlow = appViewModel.getCorrespondingChargingSlots(charger)
     val slots by slotsFlow.collectAsState(initial = emptyList())
 
+    var personalRating by remember { mutableDoubleStateOf(0.0) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(charger.name) },
+        title = {
+            Row (
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(charger.name)
+                IconButton(
+                    onClick = {favourite = !favourite},
+                ) {
+                    if (favourite) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = "Add to favorite",
+                            modifier = Modifier.size(30.dp),
+                            tint = Color.Yellow
+                        )
+                    }
+                    else {
+                        Icon(
+                            Icons.Default.StarBorder,
+                            contentDescription = "Remove from favorite",
+                            modifier = Modifier.size(30.dp),
+                            tint = Color.Yellow
+                        )
+                    }
+                }
+            }
+        },
         text = {
             Column (
                 Modifier
@@ -470,33 +507,18 @@ fun ChargerInformationPanel(
 
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
-                Text("Favourite")
-                IconButton(
-                    onClick = {favourite = !favourite},
-                ) {
-                    if (favourite) {
-                        Icon(
-                            Icons.Default.Star,
-                            contentDescription = "Cash available",
-                            modifier = Modifier.size(30.dp),
-                            tint = Color.Yellow
-                        )
-                    }
-                    else {
-                        Icon(
-                            Icons.Default.StarBorder,
-                            contentDescription = "Cash available",
-                            modifier = Modifier.size(30.dp),
-                            tint = Color.Yellow
-                        )
-                    }
-                }
+                Text("Rating: ${charger.ratingsMean?: "No ratings"}")
+
+                Text("Rate this charger:")
+                RateCharger(rating = personalRating, onRatingChange = { newRating -> personalRating = newRating})
+
 
                 // todo sitios perto, editar
             }
         },
         confirmButton = {
             TextButton(onClick = {
+                if (personalRating != 0.0) appViewModel.rateCharger(charger, uid, personalRating)
                 onConfirm(charger)
                 onDismiss()
             }) {
@@ -599,4 +621,67 @@ fun ChargingSlotField(slot: ChargingSlot) {
         Text("${slot.speed} - ${slot.type}")
     }
 
+}
+
+@Composable
+fun RateCharger(
+    rating: Double,
+    onRatingChange: (Double) -> Unit
+) {
+    Row (
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+    ) {
+        IconButton(
+            onClick = {onRatingChange(1.0)},
+        ) {
+            Icon(
+                imageVector = if (rating >= 1) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = "1 star",
+                modifier = Modifier.size(24.dp),
+                tint = mainColor
+            )
+        }
+        IconButton(
+            onClick = {onRatingChange(2.0)},
+        ) {
+            Icon(
+                imageVector = if (rating >= 2) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = "2 star",
+                modifier = Modifier.size(24.dp),
+                tint = mainColor
+            )
+        }
+        IconButton(
+            onClick = {onRatingChange(3.0)},
+        ) {
+            Icon(
+                imageVector = if (rating >= 3) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = "3 star",
+                modifier = Modifier.size(24.dp),
+                tint = mainColor
+            )
+        }
+        IconButton(
+            onClick = {onRatingChange(4.0)},
+        ) {
+            Icon(
+                imageVector = if (rating >= 4) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = "4 star",
+                modifier = Modifier.size(24.dp),
+                tint = mainColor
+            )
+        }
+        IconButton(
+            onClick = {onRatingChange(5.0)},
+        ) {
+            Icon(
+                imageVector = if (rating >= 5) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = "5 star",
+                modifier = Modifier.size(24.dp),
+                tint = mainColor
+            )
+        }
+    }
 }

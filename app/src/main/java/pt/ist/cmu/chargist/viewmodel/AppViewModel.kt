@@ -82,7 +82,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 "fast" to priceFast,
                 "medium" to priceMedium,
                 "slow" to priceSlow
-            )
+            ),
+            "ratings" to hashMapOf<String, Double>(),
+            "ratingsMean" to 0.0,
         )
 
         val db = Firebase.firestore
@@ -129,7 +131,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 lng,
                 priceFast,
                 priceMedium,
-                priceSlow
+                priceSlow,
+                null,
+                null,
             )
             viewModelScope.launch {
                 for (slot in finalChargingSlots) {
@@ -195,7 +199,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                         longitude = coords.longitude,
                         priceFast = prices["fast"]?.toDouble() ?: -1.0,
                         priceMedium = prices["medium"]?.toDouble() ?: -1.0,
-                        priceSlow = prices["slow"]?.toDouble() ?: -1.0
+                        priceSlow = prices["slow"]?.toDouble() ?: -1.0,
+                        ratings = document.data["ratings"] as Map<String, Double>?,
+                        ratingsMean = document.data["ratingsMean"] as Double?,
                     )
 
                     Log.d("Firebase", "id: ${document.id} | ${document.data}")
@@ -245,5 +251,52 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     fun getCorrespondingChargingSlots(charger: Charger): Flow<List<ChargingSlot>> {
         return slotRepository.getSlots(charger.chargingSlots)
+    }
+
+    fun rateCharger(charger: Charger, uid: String, rating: Double) {
+        val db = Firebase.firestore
+
+        // add/update the rating
+        db.collection("Charger")
+            .document(charger.id)
+            .update("ratings.$uid", rating)
+            .addOnSuccessListener {
+                Log.d("Firebase", "Rating successfully updated")
+
+                viewModelScope.launch {
+                    val updatedCharger = chargerRepository.getChargerById(charger.id)
+                    val newRatings = updatedCharger.ratings?.toMutableMap()
+                    newRatings?.set(uid, rating)
+
+                    // calculate the new mean score
+                    val newRatingsMean = if (newRatings?.isNotEmpty() ?: false) {
+                        newRatings!!.values.average()
+                    } else {
+                        0.0
+                    }
+
+                    chargerRepository.update(
+                        updatedCharger.copy(
+                            ratings = newRatings,
+                            ratingsMean = newRatingsMean
+                        )
+                    )
+
+                    // update the mean rating
+                    db.collection("Charger")
+                        .document(charger.id)
+                        .update("ratingsMean", newRatingsMean)
+                        .addOnSuccessListener {
+                            Log.d("Firebase", "Mean rating successfully updated")
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e("Firebase", "Error updating mean rating", e)
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firebase", "Error updating rating", e)
+            }
+        return
     }
 }

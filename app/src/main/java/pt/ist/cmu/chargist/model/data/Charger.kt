@@ -15,5 +15,7 @@ data class Charger(
     val longitude: Double,
     var priceFast: Double,
     var priceMedium: Double,
-    var priceSlow: Double
+    var priceSlow: Double,
+    var ratings: Map<String, Double>? = mutableMapOf<String, Double>(),
+    var ratingsMean: Double?,
 )
