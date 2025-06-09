@@ -1,6 +1,7 @@
 package pt.ist.cmu.chargist.viewmodel
 
 import android.R
+import android.R.attr.name
 import android.app.Application
 import android.util.Log
 import android.widget.Toast
@@ -59,7 +60,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         updateChargers()
     }
 
-    fun createCharger(name:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
+    fun createCharger(name:String, ownerId:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
                       lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double) {
 
         if (priceFast < 0 || priceMedium < 0 || priceSlow < 0) {
@@ -74,6 +75,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
         val data = hashMapOf(
             "name" to name,
+            "ownerId" to ownerId,
             "location" to GeoPoint(lat, lng),
             "cash" to cash,
             "creditCard" to creditCard,
@@ -123,6 +125,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             val c = Charger(
                 refs[0].id,
                 name,
+                ownerId,
                 refs.subList(1, refs.size).map { r -> r.id },
                 creditCard,
                 cash,
@@ -132,8 +135,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 priceFast,
                 priceMedium,
                 priceSlow,
-                null,
-                null,
+                emptyMap(),
+                0.0,
             )
             viewModelScope.launch {
                 for (slot in finalChargingSlots) {
@@ -191,6 +194,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     val charger = Charger(
                         id = document.id,
                         name = document.data["name"].toString(),
+                        ownerId = document.data["ownerId"].toString(),
                         chargingSlots = document.data["chargingSlots"] as List<String>,
                         creditCard = document.data["creditCard"] as Boolean,
                         cash = document.data["cash"] as Boolean,
@@ -200,8 +204,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                         priceFast = prices["fast"]?.toDouble() ?: -1.0,
                         priceMedium = prices["medium"]?.toDouble() ?: -1.0,
                         priceSlow = prices["slow"]?.toDouble() ?: -1.0,
-                        ratings = document.data["ratings"] as Map<String, Double>?,
-                        ratingsMean = document.data["ratingsMean"] as Double?,
+                        ratings = document.data["ratings"] as Map<String, Double>,
+                        ratingsMean = document.data["ratingsMean"] as Double,
                     )
 
                     Log.d("Firebase", "id: ${document.id} | ${document.data}")
@@ -265,12 +269,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
                 viewModelScope.launch {
                     val updatedCharger = chargerRepository.getChargerById(charger.id)
-                    val newRatings = updatedCharger.ratings?.toMutableMap()
-                    newRatings?.set(uid, rating)
+                    val newRatings = updatedCharger.ratings.toMutableMap()
+                    newRatings[uid] = rating
 
                     // calculate the new mean score
-                    val newRatingsMean = if (newRatings?.isNotEmpty() ?: false) {
-                        newRatings!!.values.average()
+                    val newRatingsMean = if (newRatings.isNotEmpty()) {
+                        newRatings.values.average()
                     } else {
                         0.0
                     }

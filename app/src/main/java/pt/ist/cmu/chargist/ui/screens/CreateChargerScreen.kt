@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.auth.FirebaseAuth
 import okhttp3.Request
 import org.json.JSONObject
 import pt.ist.cmu.chargist.model.data.ChargingSlot
@@ -73,6 +74,10 @@ fun CreateChargerForm(
     onCreateClick: () -> Unit
 ) {
     val context = LocalContext.current
+
+    val user = FirebaseAuth.getInstance().currentUser
+    val uid = user!!.uid
+
     val scrollState = rememberScrollState()
 
     val userLocation = mapViewModel.userLocation
@@ -261,6 +266,7 @@ fun CreateChargerForm(
                     try {
                         appViewModel.createCharger(
                             name = chargerName,
+                            ownerId = uid,
                             slots = chargingSlots,
                             creditCard = creditCard,
                             cash = cash,
