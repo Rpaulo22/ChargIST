@@ -129,9 +129,6 @@ dependencies {
     // Gson
     implementation("com.google.code.gson:gson:2.11.0")
 
-    // Vico charts
-    implementation(libs.vico.compose.m3)
-
     // GeoFirestore
     implementation("com.github.imperiumlabs:GeoFirestore-Android:v1.5.0")
 }
