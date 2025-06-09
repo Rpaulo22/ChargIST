@@ -220,7 +220,7 @@ fun AppNavigation() {
                     }
                 },
                 goToRegisterScreen = {
-                    navController.navigate(Screen.Register)
+                    navController.navigate(Screen.Register.route)
                 },
                 goToHomeScreen = {
                     navController.navigate(Screen.Home.route)

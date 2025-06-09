@@ -159,7 +159,7 @@ fun LoginScreen(
             colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
             border = BorderStroke(2.dp, mainColor)
-        ) { Text("Log In as Guest") }
+        ) { Text("Continue as Guest") }
         Spacer(Modifier.size(5.dp))
         TextButton(
             onClick = {goToRegisterScreen()},

@@ -2,6 +2,7 @@ package pt.ist.cmu.chargist.ui.screens
 
 import android.Manifest
 import android.R.attr.navigationIcon
+import android.R.attr.rating
 import android.R.attr.text
 import android.annotation.SuppressLint
 import android.content.Context
@@ -426,7 +427,7 @@ fun ChargerInformationPanel(
     val slotsFlow = appViewModel.getCorrespondingChargingSlots(charger)
     val slots by slotsFlow.collectAsState(initial = emptyList())
 
-    var personalRating by remember { mutableDoubleStateOf(0.0) }
+    var personalRating by remember { mutableStateOf(charger.ratings[uid] ?: 0.0) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -507,8 +508,19 @@ fun ChargerInformationPanel(
 
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
-                Text("Rating: ${charger.ratingsMean?: "No ratings"}")
-
+                // Ratings
+                Row (
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Rating: ${if (charger.ratingsMean != 0.0) charger.ratingsMean else "None"}")
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Star",
+                        modifier = Modifier.size(24.dp),
+                        tint = mainColor
+                    )
+                }
+                Spacer(Modifier.size(6.dp))
                 Text("Rate this charger:")
                 RateCharger(rating = personalRating, onRatingChange = { newRating -> personalRating = newRating})
 
@@ -630,7 +642,8 @@ fun RateCharger(
 ) {
     Row (
         modifier = Modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         IconButton(

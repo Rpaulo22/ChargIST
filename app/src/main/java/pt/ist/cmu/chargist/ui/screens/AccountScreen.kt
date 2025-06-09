@@ -62,6 +62,7 @@ fun AccountScreen(
             isGuest = accountViewModel::isGuest,
             signOut = accountViewModel::signOut,
             goToHomeScreen = goToHomeScreen,
+            goToLoginScreen = goToLoginScreen,
             goToRegisterScreen = goToRegisterScreen,
             goToSearchScreen = goToSearchScreen
         )
@@ -72,6 +73,7 @@ fun AccountScreen(
 private fun AccountScreenContent (
     isGuest: () -> Boolean,
     signOut: () -> Unit,
+    goToLoginScreen: () -> Unit,
     goToRegisterScreen: () -> Unit,
     goToHomeScreen: () -> Unit,
     goToSearchScreen: () -> Unit
@@ -105,33 +107,11 @@ private fun AccountScreenContent (
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                ) {
-                    Text(text = "Random Row 1")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(thickness = 1.dp)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                ) {
-                    Text(text = "Random Row 2")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(thickness = 1.dp)
-                Spacer(modifier = Modifier.height(8.dp))
-
                 if (isGuest()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { }
+                            .clickable { goToLoginScreen() }
                     ) {
                         Text(text = "Sign In")
                     }
