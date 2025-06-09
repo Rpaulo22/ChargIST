@@ -131,6 +131,9 @@ dependencies {
 
     // Vico charts
     implementation(libs.vico.compose.m3)
+
+    // GeoFirestore
+    implementation("com.github.imperiumlabs:GeoFirestore-Android:v1.5.0")
 }
 
 secrets {
