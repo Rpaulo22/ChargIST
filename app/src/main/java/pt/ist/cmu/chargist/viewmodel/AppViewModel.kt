@@ -31,6 +31,7 @@ import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
 import java.util.UUID
+import kotlin.math.round
 
 class AppViewModel(application: Application) : AndroidViewModel(application)  {
     private val chargerRepository: ChargerRepository
@@ -274,7 +275,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
                     // calculate the new mean score
                     val newRatingsMean = if (newRatings.isNotEmpty()) {
-                        newRatings.values.average()
+                        val avg = newRatings.values.average()
+                        round(avg * 100) / 100
                     } else {
                         0.0
                     }
