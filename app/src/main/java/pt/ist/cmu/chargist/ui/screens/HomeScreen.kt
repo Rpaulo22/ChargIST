@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -127,18 +128,6 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerComposable
 import com.google.maps.android.compose.MarkerState
-import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
-import com.patrykandpatrick.vico.core.cartesian.marker.DefaultCartesianMarker
-import com.patrykandpatrick.vico.core.common.Legend
-import com.patrykandpatrick.vico.core.common.component.TextComponent
 import pt.ist.cmu.chargist.MainActivity
 import pt.ist.cmu.chargist.R
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
@@ -429,18 +418,9 @@ fun ChargerInformationPanel(
     }
 
     var chargerAddress by remember { mutableStateOf("Loading...") }
-    val modelProducer = remember { CartesianChartModelProducer() }
 
     LaunchedEffect(Unit) { // launch  coroutine to obtain charger address
         chargerAddress = mapViewModel.getAddress(context, LatLng(charger.latitude,charger.longitude))
-
-        // column chart
-        val ratingCounts = (1..5).map { rating ->
-            charger.ratings.values.count { it.toInt() == rating }
-        }
-        modelProducer.runTransaction {
-            columnSeries { series(ratingCounts.map { it.toFloat() }) }
-        }
     }
 
     var favourite by remember { mutableStateOf(charger.id in favourites)}
@@ -545,10 +525,7 @@ fun ChargerInformationPanel(
                 Text("Rate this charger:")
                 RateCharger(rating = personalRating, onRatingChange = { newRating -> personalRating = newRating})
                 Spacer(Modifier.size(6.dp))
-                RatingsColumnChart(
-                    modelProducer = modelProducer,
-                    modifier = Modifier
-                )
+                RatingHistogram(charger.ratings)
 
 
                 // todo sitios perto, editar
@@ -726,19 +703,40 @@ fun RateCharger(
 }
 
 @Composable
-fun RatingsColumnChart(
-    modelProducer: CartesianChartModelProducer,
-    modifier: Modifier = Modifier,
-) {
+fun RatingHistogram(ratings: Map<String, Double>) {
+    val ratingCounts = (1..5).associateWith { rating ->
+        ratings.values
+            .map { it.toInt() }
+            .count { it == rating }
+    }
 
-    CartesianChartHost(
-        chart =
-            rememberCartesianChart(
-                rememberColumnCartesianLayer(),
-                startAxis = VerticalAxis.rememberStart(),
-                bottomAxis = HorizontalAxis.rememberBottom(),
-            ),
-        modelProducer = modelProducer,
-        modifier = modifier,
-    )
+    val maxCount = ratingCounts.values.maxOrNull() ?: 0
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        (5 downTo 1).forEach { rating ->
+            val count = ratingCounts[rating] ?: 0.0
+            val barFraction = if (maxCount > 0) count.toFloat() / maxCount else 0f
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 4.dp)
+            ) {
+                Text("$rating ★", modifier = Modifier.width(40.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(barFraction * 7/8)
+                        .height(24.dp)
+                        .background(mainColor, RoundedCornerShape(4.dp))
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                if (count != 0) {
+                    Text("$count", modifier = Modifier.width(40.dp))
+                }
+            }
+        }
+    }
 }
