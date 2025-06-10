@@ -17,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,12 +43,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
@@ -90,6 +94,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -98,12 +103,16 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -442,6 +451,9 @@ fun ChargerInformationPanel(
     var personalRating by remember { mutableStateOf(charger.ratings[uid] ?: 0.0) }
     var personalRatingChanged by remember { mutableStateOf(false) }
 
+    var slotDialog by remember {mutableStateOf(false)}
+    var selectedSlot by remember { mutableIntStateOf(0) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -507,10 +519,21 @@ fun ChargerInformationPanel(
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
                 // Charging Slots
-                Text("Charging slots:")
-                slots.forEach {
-                    ChargingSlotField(it)
-                    Spacer(Modifier.size(4.dp))
+                if (slots.isEmpty()) {
+                    Text("There are no registered Charging Slots here!", textAlign = TextAlign.Center)
+                }
+                else {
+                    Text("Charging slots:")
+                    slots.forEach { slot ->
+                        ChargingSlotField(
+                            slot = slot,
+                            onClick = {
+                                selectedSlot = slots.indexOf(slot)
+                                slotDialog = true
+                            }
+                        )
+                        Spacer(Modifier.size(4.dp))
+                    }
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
@@ -549,7 +572,7 @@ fun ChargerInformationPanel(
                 RatingHistogram(charger.ratings)
 
 
-                // todo sitios perto, editar
+                // todo sitios perto
             }
         },
         confirmButton = {
@@ -581,6 +604,14 @@ fun ChargerInformationPanel(
             }
         }
     )
+    if (slotDialog) {
+        ChargingSlotDialog(
+            slot = slots[selectedSlot],
+            number = selectedSlot,
+            chargerName = charger.name,
+            onDismiss = {slotDialog = false}
+        )
+    }
 }
 
 @Composable
@@ -662,15 +693,94 @@ fun PaymentMethods(
 }
 
 @Composable
-fun ChargingSlotField(slot: ChargingSlot) {
+fun ChargingSlotField(
+    slot: ChargingSlot,
+    onClick: () -> Unit
+) {
     Box(
         Modifier
             .background(colorScheme.background, RoundedCornerShape(8.dp))
             .padding(6.dp)
+            .clickable(onClick = onClick)
     ) {
         Text("${slot.speed} - ${slot.type}")
     }
+}
 
+@Composable
+fun ChargingSlotDialog(
+    slot: ChargingSlot,
+    number: Int,
+    chargerName: String,
+    onDismiss: () -> Unit) {
+
+    val speed = when (slot.speed) {
+        "Fast" -> 3
+        "Medium" -> 2
+        "Slow" -> 1
+        else -> 0
+    }
+
+    AlertDialog(
+        title = {
+            Text("Charging slot #${number+1} of $chargerName")
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Text("Speed", fontWeight = FontWeight.Bold, fontSize = 30.sp)
+                Spacer(Modifier.size(10.dp))
+                Row {
+                    Text("(${slot.speed.first()})")
+                    Spacer(Modifier.size(4.dp))
+                    for (i in 0 until 3) {
+                        Icon(
+                            Icons.Default.Bolt,
+                            contentDescription = "Speed bolt",
+                            modifier = Modifier.size(25.dp),
+                            tint = if (i < speed) mainColor else mainColor.copy(alpha = 0.3f)
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
+
+                Text("Type", fontWeight = FontWeight.Bold, fontSize = 30.sp)
+                Spacer(Modifier.size(10.dp))
+                Row (
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(slot.type)
+                    Spacer(Modifier.size(6.dp))
+                    if (slot.type == "CCS2")
+                        Image(
+                            painter = painterResource(
+                                id = R.drawable.ccs2
+                            ),
+                            contentDescription = "CCS2 charger",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(38.dp),
+                            colorFilter = ColorFilter.tint(mainColor, blendMode = BlendMode.SrcAtop)
+                        )
+                    else
+                        Image(
+                            painter = painterResource(
+                                id = R.drawable.type_2
+                            ),
+                            contentDescription = "Type 2 charger",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(30.dp),
+                            colorFilter = ColorFilter.tint(mainColor, blendMode = BlendMode.SrcAtop)
+                        )
+                }
+            }
+        },
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = {}
+    )
 }
 
 @Composable
