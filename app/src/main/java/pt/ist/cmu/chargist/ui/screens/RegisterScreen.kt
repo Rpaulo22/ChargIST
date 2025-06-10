@@ -72,15 +72,15 @@ fun RegisterScreen(
 
 @Composable
 private fun RegisterScreenContent (
-    signUp: (String, String, String) -> Unit,
+    signUp: (String, String, String, String, String) -> Unit,
     invalidEmail: Boolean,
     invalidPassword: Boolean,
     invalidRepeatPassword: Boolean,
 ) {
 
-    var user by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordConfirm by remember { mutableStateOf("") }
 
@@ -145,16 +145,16 @@ private fun RegisterScreenContent (
         }
         // Username
         OutlinedTextField(
-            value = user,
-            onValueChange = {user = it},
+            value = username,
+            onValueChange = {username = it},
             singleLine = true,
             label = {Text("Username")},
         )
         Spacer(modifier = Modifier.size(10.dp))
         // Phone
         OutlinedTextField(
-            value = phone,
-            onValueChange = {phone = it},
+            value = phoneNumber,
+            onValueChange = {phoneNumber = it},
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             singleLine = true,
             label = {Text("Phone Number")},
@@ -238,6 +238,8 @@ private fun RegisterScreenContent (
             onClick = {
                 signUp(
                     email,
+                    username,
+                    phoneNumber,
                     password,
                     passwordConfirm,
                 )

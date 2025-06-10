@@ -144,6 +144,7 @@ fun HomeScreen(
     centerPoint: LatLng? = null
 ) {
 
+
     val chargers by appViewModel.allChargers.collectAsState()
     val slots by appViewModel.allChargingSlots.collectAsState()
 
@@ -407,10 +408,9 @@ fun ChargerInformationPanel(
     appViewModel: AppViewModel,
     favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K")
 ) {
-    val user = FirebaseAuth.getInstance().currentUser
-    val uid = user!!.uid
-
     val context = LocalContext.current
+
+    val uid = appViewModel.uid
 
     if (charger == null) {
         Toast.makeText(context, "Error loading charger information \uD83D\uDE14", Toast.LENGTH_LONG).show()
