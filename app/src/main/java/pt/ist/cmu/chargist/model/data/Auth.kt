@@ -29,9 +29,6 @@ class Auth @Inject constructor(private val auth: FirebaseAuth) {
     }
 
     suspend fun signIn(email: String, password: String) {
-        if (isGuest()) {
-            deleteAccount()
-        }
         auth.signInWithEmailAndPassword(email, password).await()
     }
 

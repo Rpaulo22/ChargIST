@@ -83,13 +83,18 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
                 // add User to Firestore
                 val user = FirebaseAuth.getInstance().currentUser
                 val uid = user!!.uid
+
+                // if user was a guest before, keep his favorite chargers
+                val favoriteChargers = userRepository.getUserById(uid)?.favoriteChargers ?: mutableListOf<String>()
+
                 val userData = hashMapOf(
                     "email" to email,
                     "username" to username,
                     "phoneNumber" to phoneNumber,
-                    "favoriteChargers" to arrayListOf<String>(),
+                    "favoriteChargers" to favoriteChargers,
                 )
                 val db = Firebase.firestore
+                Log.e("test", favoriteChargers.toString())
                 db.collection("User")
                     .document(uid)
                     .set(userData)
@@ -100,7 +105,7 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
                             email,
                             username,
                             phoneNumber,
-                            mutableListOf<String>(),
+                            favoriteChargers,
                         )
                         viewModelScope.launch {
                             userRepository.insert(user)
