@@ -1,0 +1,19 @@
+package pt.ist.cmu.chargist.model.data
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy.Companion.REPLACE
+import androidx.room.Query
+import androidx.room.Update
+
+@Dao
+interface UserDao {
+    @Query("SELECT * FROM user WHERE id = :userId LIMIT 1")
+    suspend fun getUserById(userId: String): User?
+
+    @Insert(onConflict = REPLACE)
+    suspend fun insertUser(user: User)
+
+    @Update
+    suspend fun updateUser(user: User)
+}

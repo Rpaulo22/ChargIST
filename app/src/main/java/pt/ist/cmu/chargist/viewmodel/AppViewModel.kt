@@ -15,6 +15,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.tasks.Tasks.await
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseException
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldPath
@@ -22,6 +23,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -31,22 +33,31 @@ import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.data.ChargingSlot
+import pt.ist.cmu.chargist.model.data.User
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
+import pt.ist.cmu.chargist.model.repository.UserRepository
 import java.util.UUID
 import kotlin.math.round
 
 class AppViewModel(application: Application) : AndroidViewModel(application)  {
+    private val userRepository: UserRepository
     private val chargerRepository: ChargerRepository
     private val slotRepository: ChargingSlotRepository
     val allChargers: StateFlow<List<Charger>>
     val allChargingSlots: StateFlow<List<ChargingSlot>>
+    val currentUser = MutableStateFlow<User?>(null)
+
+    val user = FirebaseAuth.getInstance().currentUser
+    val uid = user!!.uid
 
     var lastSlot by mutableStateOf<ChargingSlot?>(null)
 
 
     init {
+        val userDao = AppDatabase.getDatabase(application).userDao()
         val chargerDao = AppDatabase.getDatabase(application).chargerDao()
         val chargingSlotDao = AppDatabase.getDatabase(application).chargingSlotDao()
+        userRepository = UserRepository(userDao)
         chargerRepository = ChargerRepository(chargerDao)
         slotRepository = ChargingSlotRepository(chargingSlotDao)
         allChargers = chargerRepository.allChargers.stateIn(
@@ -61,6 +72,35 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         )
 
         updateChargers()
+
+        viewModelScope.launch {
+            val localUser = userRepository.getUserById(uid)
+            if (localUser != null) {
+                currentUser.value = localUser
+                Log.e("test", localUser.toString())
+            }
+            else {
+                val db = Firebase.firestore
+                val doc = db
+                    .collection("User")
+                    .document(uid)
+                    .get()
+                    .await()
+                val data = doc.data
+                if (doc.exists() && data != null) {
+                    val remoteUser = User(
+                        id = doc.id,
+                        email = data["email"] as String,
+                        name = data["username"] as String,
+                        phoneNumber = data["phoneNumber"] as String,
+                        favoriteChargers = data["favoriteChargers"] as List<String>
+                    )
+                    userRepository.insert(remoteUser)
+                    currentUser.value = remoteUser
+                    Log.e("test", localUser.toString())
+                }
+            }
+        }
     }
 
     fun createCharger(name:String, ownerId:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,

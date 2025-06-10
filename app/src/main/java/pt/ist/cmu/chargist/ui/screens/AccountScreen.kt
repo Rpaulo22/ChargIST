@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,13 +36,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import pt.ist.cmu.chargist.model.data.User
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
+import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.AccountViewModel
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
+import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 
 @Composable
 fun AccountScreen(
@@ -52,6 +60,7 @@ fun AccountScreen(
     goToSearchScreen: () -> Unit,
     appViewModel: AppViewModel = viewModel()
 ) {
+    val currentUser by appViewModel.currentUser.collectAsState()
     val context = LocalContext.current
     val shouldRestartApp by accountViewModel.shouldRestartApp.collectAsStateWithLifecycle()
     if (shouldRestartApp) {
@@ -59,24 +68,26 @@ fun AccountScreen(
         goToLoginScreen()
     } else {
         AccountScreenContent(
+            currentUser = currentUser,
             isGuest = accountViewModel::isGuest,
             signOut = accountViewModel::signOut,
             goToHomeScreen = goToHomeScreen,
             goToLoginScreen = goToLoginScreen,
             goToRegisterScreen = goToRegisterScreen,
-            goToSearchScreen = goToSearchScreen
+            goToSearchScreen = goToSearchScreen,
         )
     }
 }
 
 @Composable
 private fun AccountScreenContent (
+    currentUser: User?,
     isGuest: () -> Boolean,
     signOut: () -> Unit,
     goToLoginScreen: () -> Unit,
     goToRegisterScreen: () -> Unit,
     goToHomeScreen: () -> Unit,
-    goToSearchScreen: () -> Unit
+    goToSearchScreen: () -> Unit,
 ) {
     Scaffold (
         bottomBar = {
@@ -103,7 +114,20 @@ private fun AccountScreenContent (
                 if (isGuest()) {
                     Text(text = "You're a guest", fontSize = 24.sp)
                 }
-                Text(text = "User ${"1234 I Am Hardcoded!!!!"}", fontSize = 24.sp)
+                Text(
+                    text = buildAnnotatedString {
+                        append("Welcome, ")
+                        withStyle(
+                            style = SpanStyle(
+                                fontWeight = FontWeight.Bold,
+                                color = mainColor
+                            )
+                        ) {
+                            append(currentUser?.name ?: "")
+                        }
+                    },
+                    fontSize = 24.sp
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
