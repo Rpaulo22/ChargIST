@@ -94,7 +94,6 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
                     "favoriteChargers" to favoriteChargers,
                 )
                 val db = Firebase.firestore
-                Log.e("test", favoriteChargers.toString())
                 db.collection("User")
                     .document(uid)
                     .set(userData)
@@ -125,9 +124,9 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun CharSequence?.isValidEmail() = !isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(this).matches()
 
-    fun CharSequence?.isValidUsername() = !isNullOrEmpty() && this.length >= 3
+}    fun CharSequence?.isValidEmail() = !isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(this).matches()
 
-    fun CharSequence?.isValidPassword() = !isNullOrEmpty() && this.length >= 6
-}
+fun CharSequence?.isValidUsername() = !isNullOrEmpty() && this.length >= 3
+
+fun CharSequence?.isValidPassword() = !isNullOrEmpty() && this.length >= 6

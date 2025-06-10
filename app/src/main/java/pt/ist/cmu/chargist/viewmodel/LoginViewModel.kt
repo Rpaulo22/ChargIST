@@ -3,6 +3,7 @@ package pt.ist.cmu.chargist.viewmodel
 import android.R.attr.phoneNumber
 import android.app.Application
 import android.util.Log
+import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -37,7 +38,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private val authRepository: AuthRepository
     private val userRepository: UserRepository
 
-    val user = Firebase.auth.currentUser
+    val user get() = Firebase.auth.currentUser
 
     init {
         val firebaseAuth = FirebaseAuth.getInstance()
@@ -67,11 +68,15 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         viewModelScope.launch {
             try {
-                // TODO: add proper sanitization and verification
+                if (!email.isValidEmail()) {
+                    throw IllegalArgumentException("Invalid email format")
+                }
+                if (!password.isValidPassword()) {
+                    throw IllegalArgumentException("Invalid password format")
+                }
                 authRepository.signIn(email, password)
                 _loginSuccess.value = true
             } catch (e: Exception) {
-                // TODO: handle
                 _loginFailure.value = true
                 Log.e("LoginViewModel", "signIn(): caught an exception: $e")
             }
@@ -130,6 +135,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             .addOnFailureListener { e ->
                 Log.e("Firestore", "Error creating user", e)
             }
-
     }
+
+    fun CharSequence?.isValidEmail() = !isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(this).matches()
+
+    fun CharSequence?.isValidPassword() = !isNullOrEmpty() && this.length >= 6
 }

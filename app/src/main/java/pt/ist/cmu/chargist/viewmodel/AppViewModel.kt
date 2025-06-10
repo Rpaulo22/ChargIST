@@ -83,6 +83,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
         updateChargers()
 
+        // get current user
         viewModelScope.launch {
             val localUser = userRepository.getUserById(uid)
             if (localUser != null) {
@@ -107,7 +108,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     )
                     userRepository.insert(remoteUser)
                     currentUser.value = remoteUser
-                    Log.e("test", localUser.toString())
                 }
             }
         }

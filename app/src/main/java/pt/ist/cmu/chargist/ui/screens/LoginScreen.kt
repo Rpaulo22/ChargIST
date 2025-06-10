@@ -56,7 +56,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 import pt.ist.cmu.chargist.R
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.LoginViewModel
@@ -86,7 +88,6 @@ fun LoginScreen(
     val loginSuccess by loginViewModel.loginSuccess.collectAsState()
     LaunchedEffect(loginSuccess) {
         if (loginSuccess) {
-            Toast.makeText(context, "Logged in successfully", Toast.LENGTH_SHORT).show()
             goToHomeScreen()
         }
     }
@@ -161,9 +162,9 @@ fun LoginScreen(
         ) { Text("Log In") }
         OutlinedButton(
             onClick = {
-                if (loginViewModel.user == null)
+                if (loginViewModel.user == null) {
                     showGuestUsernameDialog = true
-                else {
+                } else {
                     loginViewModel.continueAsGuest("")
                 }
             },

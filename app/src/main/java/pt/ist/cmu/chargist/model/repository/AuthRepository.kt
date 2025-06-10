@@ -1,9 +1,14 @@
 package pt.ist.cmu.chargist.model.repository
 
 import android.util.Log
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import pt.ist.cmu.chargist.model.data.Auth
 import javax.inject.Inject
@@ -18,23 +23,15 @@ class AuthRepository (
         authData.createGuestAccount()
     }
 
-    fun isGuest() : Boolean {
+    fun isGuest(): Boolean {
         return authData.isGuest()
     }
 
     suspend fun signIn(email: String, password: String) {
-        // Save the guest user
-        val currentUser = FirebaseAuth.getInstance().currentUser
-        val wasGuest = currentUser?.isAnonymous == true
-        try {
-            authData.signIn(email, password)
-            // Only delete guest user if the login was successful
-            if (wasGuest) {
-                currentUser.delete().await()
-            }
-        } catch (e: Exception) {
-            throw e
+        if (isGuest()) {
+            deleteAccount()
         }
+        authData.signIn(email, password)
     }
 
     suspend fun signUp(email: String, password: String) {
@@ -46,6 +43,13 @@ class AuthRepository (
     }
 
     suspend fun deleteAccount() {
+        val user = FirebaseAuth.getInstance().currentUser
+        val uid = user!!.uid
+        val db = Firebase.firestore
+        db.collection("User")
+            .document(uid)
+            .delete()
+            .await()
         authData.deleteAccount()
     }
 }
