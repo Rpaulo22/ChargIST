@@ -118,6 +118,8 @@ dependencies {
     implementation("com.google.maps.android:maps-compose:6.6.0")
     implementation("com.google.android.gms:play-services-maps:19.2.0")
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("com.google.android.libraries.places:places:4.3.1")
+
 
     // Google Maps SDK for Android
     implementation(libs.places)
@@ -131,6 +133,7 @@ dependencies {
 
     // GeoFirestore
     implementation("com.github.imperiumlabs:GeoFirestore-Android:v1.5.0")
+
 }
 
 secrets {

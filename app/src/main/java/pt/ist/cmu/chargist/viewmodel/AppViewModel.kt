@@ -3,6 +3,7 @@ package pt.ist.cmu.chargist.viewmodel
 import android.R
 import android.R.attr.name
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.getValue
@@ -14,6 +15,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.tasks.Tasks.await
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.CircularBounds
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseException
@@ -107,7 +110,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                       lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double) {
 
         if (priceFast < 0 || priceMedium < 0 || priceSlow < 0) {
-            throw Exception("Invalid price (must be positive).")
+            throw Exception("Invalid price (must be 0 €/kWh minimum).")
+        }
+        if (priceFast > 100 || priceMedium > 100 || priceSlow > 100) {
+            throw Exception("Invalid price (must be 100 €/kWh maximum).")
         }
         if (name.length < 3) {
             throw Exception("Charger's name must have 3 characters or more.")
@@ -196,7 +202,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                       lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double, deletedSlots: List<ChargingSlot>) {
 
         if (priceFast < 0 || priceMedium < 0 || priceSlow < 0) {
-            throw Exception("Invalid price (must be positive).")
+            throw Exception("Invalid price (must be more or equal than 0 €/kWh).")
+        }
+        if (priceFast > 100 || priceMedium > 100 || priceSlow > 100) {
+            throw Exception("Invalid price (must be less than 100 €/kWh).")
         }
         if (name.length < 3) {
             throw Exception("Charger's name must have 3 characters or more.")
