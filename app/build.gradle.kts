@@ -128,6 +128,9 @@ dependencies {
 
     // Gson
     implementation("com.google.code.gson:gson:2.11.0")
+
+    // GeoFirestore
+    implementation("com.github.imperiumlabs:GeoFirestore-Android:v1.5.0")
 }
 
 secrets {
