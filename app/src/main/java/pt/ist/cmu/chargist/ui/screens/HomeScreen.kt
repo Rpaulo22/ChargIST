@@ -114,12 +114,14 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -153,8 +155,6 @@ fun HomeScreen(
     mapViewModel: MapViewModel = viewModel(),
     centerPoint: LatLng? = null
 ) {
-
-
     val chargers by appViewModel.allChargers.collectAsState()
     val slots by appViewModel.allChargingSlots.collectAsState()
 
@@ -223,6 +223,8 @@ fun Map(
     appViewModel: AppViewModel,
     centerPoint: LatLng?
 ) {
+    val favoriteChargers by appViewModel.favoriteChargers.collectAsState()
+
     var showChargerInformationPanel by remember { mutableStateOf(false) }
 
     var selectedCharger by remember { mutableStateOf<Charger?>(null) } // charger whose information panel is showing
@@ -260,15 +262,18 @@ fun Map(
         ) {
 
             for (charger in chargers) {
-                Log.d("Chargers","$charger")
-                SimpleMapMarker(
-                    charger = charger,
-                    onClick = {
-                        showChargerInformationPanel = true
-                        selectedCharger = charger
-                    },
-                    mapViewModel = mapViewModel
-                )
+                Log.d("Chargers", "$charger")
+                key(charger.id, favoriteChargers.contains(charger.id)) {
+                    SimpleMapMarker(
+                        charger = charger,
+                        onClick = {
+                            showChargerInformationPanel = true
+                            selectedCharger = charger
+                        },
+                        mapViewModel = mapViewModel,
+                        favoriteChargers = favoriteChargers,
+                    )
+                }
             }
         }
 
@@ -297,7 +302,8 @@ fun Map(
             onEditCharger = onEditCharger,
             charger = selectedCharger,
             mapViewModel = mapViewModel,
-            appViewModel = appViewModel
+            appViewModel = appViewModel,
+            favoriteChargers = favoriteChargers,
         )
     }
 }
@@ -306,14 +312,15 @@ fun Map(
 fun SimpleMapMarker(
     charger: Charger,
     onClick: () -> Unit,
-    favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K"),
-    mapViewModel: MapViewModel
+    mapViewModel: MapViewModel,
+    favoriteChargers: List<String>?,
 ) {
+
     val markerState = remember { MarkerState(position = LatLng(charger.latitude, charger.longitude)) }
 
     var expandMarker by remember { mutableStateOf(false) } // status that stores whether the marker is expanded
 
-    val favourite = (charger.id in favourites)
+    val favourite = (favoriteChargers?.contains(charger.id) == true)
 
     val imgUrl: String? = null // todo actually sacate the image from firebase
 
@@ -416,8 +423,9 @@ fun ChargerInformationPanel(
     onEditCharger: (String) -> Unit,
     mapViewModel: MapViewModel,
     appViewModel: AppViewModel,
-    favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K")
+    favoriteChargers: List<String>
 ) {
+
     val context = LocalContext.current
 
     val uid = appViewModel.uid
@@ -433,12 +441,15 @@ fun ChargerInformationPanel(
         chargerAddress = mapViewModel.getAddress(context, LatLng(charger.latitude,charger.longitude))
     }
 
-    var favourite by remember { mutableStateOf(charger.id in favourites)}
+    var favourite by remember { mutableStateOf(favoriteChargers?.contains(charger.id) == true )}
+    Log.e("test", favoriteChargers.toString())
+    var favouriteChanged by remember { mutableStateOf(false) }
 
     val slotsFlow = appViewModel.getCorrespondingChargingSlots(charger)
     val slots by slotsFlow.collectAsState(initial = emptyList())
 
     var personalRating by remember { mutableStateOf(charger.ratings[uid] ?: 0.0) }
+    var personalRatingChanged by remember { mutableStateOf(false) }
 
     var slotDialog by remember {mutableStateOf(false)}
     var selectedSlot by remember { mutableIntStateOf(0) }
@@ -455,7 +466,10 @@ fun ChargerInformationPanel(
             ) {
                 Text(charger.name)
                 IconButton(
-                    onClick = {favourite = !favourite},
+                    onClick = {
+                        favourite = !favourite
+                        favouriteChanged = true
+                    },
                 ) {
                     if (favourite) {
                         Icon(
@@ -547,7 +561,13 @@ fun ChargerInformationPanel(
                 }
                 Spacer(Modifier.size(6.dp))
                 Text("Rate this charger:")
-                RateCharger(rating = personalRating, onRatingChange = { newRating -> personalRating = newRating})
+                RateCharger(
+                    rating = personalRating,
+                    onRatingChange = {
+                        newRating -> personalRating = newRating
+                        personalRatingChanged = true
+                    }
+                )
                 Spacer(Modifier.size(6.dp))
                 RatingHistogram(charger.ratings)
 
@@ -575,7 +595,15 @@ fun ChargerInformationPanel(
         dismissButton = {
             TextButton(
                 onClick = {
-                    if (personalRating != 0.0) appViewModel.rateCharger(charger, uid, personalRating)
+                    if (favouriteChanged) {
+                        if (favourite) {
+                            appViewModel.favoriteCharger(charger)
+                        }
+                        else {
+                            appViewModel.unfavoriteCharger(charger)
+                        }
+                    }
+                    if (personalRatingChanged) appViewModel.rateCharger(charger, uid, personalRating)
                     onDismiss()
                 }) {
                 Text("Back")
@@ -851,7 +879,7 @@ fun RatingHistogram(ratings: Map<String, Double>) {
                 Text("$rating ★", modifier = Modifier.width(40.dp))
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(barFraction * 7/8)
+                        .fillMaxWidth(barFraction * 7 / 8)
                         .height(24.dp)
                         .background(mainColor, RoundedCornerShape(4.dp))
                 )

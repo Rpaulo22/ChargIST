@@ -53,6 +53,7 @@ fun RegisterScreen(
 ) {
     val context = LocalContext.current
     val invalidEmail by registerViewModel.invalidEmail.collectAsStateWithLifecycle()
+    val invalidUsername by registerViewModel.invalidUsername.collectAsStateWithLifecycle()
     val invalidPassword by registerViewModel.invalidPassword.collectAsStateWithLifecycle()
     val invalidRepeatPassword by registerViewModel.invalidRepeatPassword.collectAsStateWithLifecycle()
     val shouldRestartApp by registerViewModel.shouldRestartApp.collectAsStateWithLifecycle()
@@ -63,6 +64,7 @@ fun RegisterScreen(
         RegisterScreenContent(
             signUp = registerViewModel::signUp,
             invalidEmail = invalidEmail,
+            invalidUsername = invalidUsername,
             invalidPassword = invalidPassword,
             invalidRepeatPassword = invalidRepeatPassword,
         )
@@ -74,6 +76,7 @@ fun RegisterScreen(
 private fun RegisterScreenContent (
     signUp: (String, String, String, String, String) -> Unit,
     invalidEmail: Boolean,
+    invalidUsername: Boolean,
     invalidPassword: Boolean,
     invalidRepeatPassword: Boolean,
 ) {
@@ -150,6 +153,14 @@ private fun RegisterScreenContent (
             singleLine = true,
             label = {Text("Username")},
         )
+        if (invalidUsername) {
+            Text(
+                text = "Invalid Username (must have at least 3 characters)",
+                color = Color.Red,
+                fontSize = 10.sp,
+                modifier = Modifier.align(Alignment.Start),
+            )
+        }
         Spacer(modifier = Modifier.size(10.dp))
         // Phone
         OutlinedTextField(
@@ -157,7 +168,7 @@ private fun RegisterScreenContent (
             onValueChange = {phoneNumber = it},
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             singleLine = true,
-            label = {Text("Phone Number")},
+            label = {Text("Phone Number (optional)")},
         )
         Spacer(modifier = Modifier.size(20.dp))
 
@@ -191,7 +202,7 @@ private fun RegisterScreenContent (
         )
         if (invalidPassword) {
             Text(
-                text = "Invalid Password (must have atleast 6 characters)",
+                text = "Invalid Password (must have at least 6 characters)",
                 color = Color.Red,
                 fontSize = 10.sp,
                 modifier = Modifier.align(Alignment.Start),
@@ -224,7 +235,7 @@ private fun RegisterScreenContent (
         )
         if (invalidRepeatPassword) {
             Text(
-                text = "Passwords must match",
+                text = "Passwords don't match",
                 color = Color.Red,
                 fontSize = 10.sp,
                 modifier = Modifier.align(Alignment.Start),

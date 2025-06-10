@@ -39,11 +39,17 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
     private val _invalidEmail = MutableStateFlow(false)
     val invalidEmail: StateFlow<Boolean> get() = _invalidEmail.asStateFlow()
 
+    private val _invalidUsername = MutableStateFlow(false)
+    val invalidUsername: StateFlow<Boolean> get() = _invalidUsername.asStateFlow()
+
     private val _invalidPassword = MutableStateFlow(false)
     val invalidPassword: StateFlow<Boolean> get() = _invalidPassword.asStateFlow()
 
     private val _invalidRepeatPassword = MutableStateFlow(false)
     val invalidRepeatPassword: StateFlow<Boolean> get() = _invalidRepeatPassword.asStateFlow()
+
+    private val _isSigningUp = MutableStateFlow(false)
+    val isSigningUp: StateFlow<Boolean> get() = _isSigningUp.asStateFlow()
 
     fun signUp(
         email: String,
@@ -52,13 +58,20 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
         password: String,
         repeatPassword: String,
     ) {
+        if (_isSigningUp.value) return
         viewModelScope.launch {
+            _isSigningUp.value = true
             try {
                 if (!email.isValidEmail()) {
                     _invalidEmail.value = true
                     return@launch
                 }
                 _invalidEmail.value = false
+                if (!username.isValidUsername()) {
+                    _invalidUsername.value = true
+                    return@launch
+                }
+                _invalidUsername.value = false
                 if (!password.isValidPassword()) {
                     _invalidPassword.value = true
                     return@launch
@@ -75,11 +88,15 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
                 // add User to Firestore
                 val user = FirebaseAuth.getInstance().currentUser
                 val uid = user!!.uid
+
+                // if user was a guest before, keep his favorite chargers
+                val favoriteChargers = userRepository.getUserById(uid)?.favoriteChargers ?: mutableListOf<String>()
+
                 val userData = hashMapOf(
                     "email" to email,
                     "username" to username,
                     "phoneNumber" to phoneNumber,
-                    "favoriteChargers" to arrayListOf<String>(),
+                    "favoriteChargers" to favoriteChargers,
                 )
                 val db = Firebase.firestore
                 db.collection("User")
@@ -92,7 +109,7 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
                             email,
                             username,
                             phoneNumber,
-                            emptyList(),
+                            favoriteChargers,
                         )
                         viewModelScope.launch {
                             userRepository.insert(user)
@@ -113,6 +130,8 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
     }
 
     fun CharSequence?.isValidEmail() = !isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(this).matches()
+
+    fun CharSequence?.isValidUsername() = !isNullOrEmpty() && this.length >= 3
 
     fun CharSequence?.isValidPassword() = !isNullOrEmpty() && this.length >= 6
 }

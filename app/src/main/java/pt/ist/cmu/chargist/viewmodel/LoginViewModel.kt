@@ -3,12 +3,14 @@ package pt.ist.cmu.chargist.viewmodel
 import android.R.attr.phoneNumber
 import android.app.Application
 import android.util.Log
+import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,8 +35,16 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     val isLoadingUser: StateFlow<Boolean>
         get() = _isLoadingUser.asStateFlow()
 
+    private val _isLoggingIn = MutableStateFlow(false)
+    val isLoggingIn: StateFlow<Boolean> get() = _isLoggingIn.asStateFlow()
+
+    private val _isLoggingInAsGuest = MutableStateFlow(false)
+    val isLoggingInAsGuest: StateFlow<Boolean> get() = _isLoggingInAsGuest.asStateFlow()
+
     private val authRepository: AuthRepository
     private val userRepository: UserRepository
+
+    val user get() = Firebase.auth.currentUser
 
     init {
         val firebaseAuth = FirebaseAuth.getInstance()
@@ -48,10 +58,11 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     fun loadCurrentUser() {
         viewModelScope.launch {
             try {
-
+                if (user != null && !authRepository.isGuest()) {
+                    _loginSuccess.value = true
+                }
                 _isLoadingUser.value = false
             } catch (e: Exception) {
-                // TODO: handle
                 Log.e("LoginViewModel", "loadCurrentUser(): caught an exception: $e")
             }
         }
@@ -61,24 +72,37 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         email: String,
         password: String,
     ) {
+        if (_isLoggingIn.value) return
         viewModelScope.launch {
+            _isLoggingInAsGuest.value = true
             try {
-                // TODO: add proper sanitization and verification
+                if (!email.isValidEmail()) {
+                    throw IllegalArgumentException("Invalid email format")
+                }
+                if (!password.isValidPassword()) {
+                    throw IllegalArgumentException("Invalid password format")
+                }
                 authRepository.signIn(email, password)
                 _loginSuccess.value = true
             } catch (e: Exception) {
-                // TODO: handle
                 _loginFailure.value = true
                 Log.e("LoginViewModel", "signIn(): caught an exception: $e")
             }
         }
     }
 
-    fun continueAsGuest() {
+    fun continueAsGuest(
+        username: String
+    ) {
+        if (_isLoggingInAsGuest.value) return
         viewModelScope.launch {
+            _isLoggingInAsGuest.value = true
             try {
-                authRepository.createGuestAccount()
-                addUserToDatabase("", "", "")
+                // if username is "" it means that the guest account has already been created
+                if (username != "") {
+                    authRepository.createGuestAccount()
+                    addUserToDatabase("", username, "")
+                }
                 _loginSuccess.value = true
             } catch (e: Exception) {
                 _loginFailure.value = true
@@ -111,7 +135,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     email,
                     username,
                     phoneNumber,
-                    emptyList(),
+                    mutableListOf<String>()
                 )
                 viewModelScope.launch {
                     userRepository.insert(user)
@@ -121,6 +145,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             .addOnFailureListener { e ->
                 Log.e("Firestore", "Error creating user", e)
             }
-
     }
+
+    fun CharSequence?.isValidEmail() = !isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(this).matches()
+
+    fun CharSequence?.isValidPassword() = !isNullOrEmpty() && this.length >= 6
 }

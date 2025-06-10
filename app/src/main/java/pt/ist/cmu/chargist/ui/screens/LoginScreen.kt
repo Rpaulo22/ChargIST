@@ -35,6 +35,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,10 +56,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 import pt.ist.cmu.chargist.R
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.LoginViewModel
+import kotlin.math.log
 
 @Composable
 fun LoginScreen(
@@ -84,11 +88,12 @@ fun LoginScreen(
     val loginSuccess by loginViewModel.loginSuccess.collectAsState()
     LaunchedEffect(loginSuccess) {
         if (loginSuccess) {
-            Toast.makeText(context, "Logged in successfully", Toast.LENGTH_SHORT).show()
             goToHomeScreen()
         }
     }
     val loginFailure by loginViewModel.loginFailure.collectAsStateWithLifecycle()
+
+    var showGuestUsernameDialog by remember { mutableStateOf(false) }
 
     Column (
         modifier = Modifier.fillMaxHeight().fillMaxWidth(),
@@ -156,7 +161,13 @@ fun LoginScreen(
             border = BorderStroke(2.dp, mainColor)
         ) { Text("Log In") }
         OutlinedButton(
-            onClick = { loginViewModel.continueAsGuest() },
+            onClick = {
+                if (loginViewModel.user == null) {
+                    showGuestUsernameDialog = true
+                } else {
+                    loginViewModel.continueAsGuest("")
+                }
+            },
             colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
             border = BorderStroke(2.dp, mainColor)
@@ -166,4 +177,70 @@ fun LoginScreen(
             onClick = {goToRegisterScreen()},
         ) { Text("Create Account") }
     }
+    if (showGuestUsernameDialog) {
+        GuestUsernameDialog(
+            onDismiss = { showGuestUsernameDialog = false },
+            loginViewModel = loginViewModel
+        )
+    }
 }
+
+@Composable
+fun GuestUsernameDialog(
+    onDismiss: () -> Unit,
+    loginViewModel: LoginViewModel
+) {
+    var username by remember { mutableStateOf("") }
+    var invalidUsername by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Choose an Username:")
+        },
+        text = {
+            Column (
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = {username = it},
+                    singleLine = true,
+                    label = {Text("Username")},
+                )
+                if (invalidUsername) {
+                    Text(
+                        text = "Invalid Username (must have at least 3 characters)",
+                        color = Color.Red,
+                        fontSize = 10.sp,
+                        modifier = Modifier.align(Alignment.Start),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (username.isValidUsername()) {
+                        loginViewModel.continueAsGuest(username)
+                    }
+                    else {
+                        invalidUsername = true
+                    }
+                }) {
+                Text("Continue")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                }) {
+                Text("Back")
+            }
+        }
+    )
+}
+
+fun CharSequence?.isValidUsername() = !isNullOrEmpty() && this.length >= 3

@@ -9,5 +9,5 @@ data class User(
     val email: String,
     val name: String,
     val phoneNumber: String,
-    val favoriteChargers: List<String> = mutableListOf<String>(),
+    val favoriteChargers: MutableList<String>,
 )

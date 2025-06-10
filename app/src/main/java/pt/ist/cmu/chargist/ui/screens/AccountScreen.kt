@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
@@ -25,8 +26,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -64,13 +68,13 @@ fun AccountScreen(
     val context = LocalContext.current
     val shouldRestartApp by accountViewModel.shouldRestartApp.collectAsStateWithLifecycle()
     if (shouldRestartApp) {
-        Toast.makeText(context, "Signed out successfully", Toast.LENGTH_SHORT).show()
         goToLoginScreen()
     } else {
         AccountScreenContent(
             currentUser = currentUser,
             isGuest = accountViewModel::isGuest,
             signOut = accountViewModel::signOut,
+            deleteAccount = accountViewModel::deleteAccount,
             goToHomeScreen = goToHomeScreen,
             goToLoginScreen = goToLoginScreen,
             goToRegisterScreen = goToRegisterScreen,
@@ -84,11 +88,14 @@ private fun AccountScreenContent (
     currentUser: User?,
     isGuest: () -> Boolean,
     signOut: () -> Unit,
+    deleteAccount: () -> Unit,
     goToLoginScreen: () -> Unit,
     goToRegisterScreen: () -> Unit,
     goToHomeScreen: () -> Unit,
     goToSearchScreen: () -> Unit,
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     Scaffold (
         bottomBar = {
             BottomNavigationBar(
@@ -98,19 +105,19 @@ private fun AccountScreenContent (
             )
         }
     ) { paddingValues ->
-        LazyColumn(
-            contentPadding = PaddingValues(
-                top = paddingValues.calculateTopPadding() + 16.dp,
-                bottom = paddingValues.calculateBottomPadding() + 16.dp,
-                start = 24.dp,
-                end = 24.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        Column (
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp)
+                .padding(
+                    top = paddingValues.calculateTopPadding() + 16.dp,
+                    bottom = paddingValues.calculateBottomPadding() + 16.dp,
+                    start = 24.dp,
+                    end = 24.dp
+                ),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            item {
+            Column (
+            ) {
                 if (isGuest()) {
                     Text(text = "You're a guest", fontSize = 24.sp)
                 }
@@ -137,7 +144,7 @@ private fun AccountScreenContent (
                             .fillMaxWidth()
                             .clickable { goToLoginScreen() }
                     ) {
-                        Text(text = "Sign In")
+                        Text(text = "Log in")
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -149,7 +156,7 @@ private fun AccountScreenContent (
                             .fillMaxWidth()
                             .clickable { goToRegisterScreen() }
                     ) {
-                        Text(text = "Sign Up")
+                        Text(text = "Register")
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -164,9 +171,38 @@ private fun AccountScreenContent (
                 ) {
                     Text(text = "Log Out")
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
             }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showDeleteDialog = true }
+            ) {
+                Text(
+                    text = "Delete Account",
+                    color = Color.Red
+                )
+            }
+        }
+
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Delete Account") },
+                text = { Text("Are you sure you want to permanently delete your account? This cannot be undone.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        deleteAccount()
+                        showDeleteDialog = false
+                    }) {
+                        Text("Delete", color = Color.Red)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }
