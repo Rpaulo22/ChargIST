@@ -50,7 +50,7 @@ fun LocationSearchBar (
     searchViewModel: SearchViewModel = viewModel(),
     mapViewModel: MapViewModel,
     initInCurrentLocation: Boolean = true,
-    starterCoords: LatLng = LatLng(0.0,0.0)
+    starterCoords: LatLng? = null
 ) {
     val context = LocalContext.current
     var address = mapViewModel.currentAddress
@@ -69,7 +69,7 @@ fun LocationSearchBar (
     }
     else {
         LaunchedEffect(Unit) { // get address from given coordinates when loading for first time
-            address = mapViewModel.getAddress(context, starterCoords)
+            address = mapViewModel.getAddress(context, starterCoords!!) // if not initInCurrentLocation, then starterCoords should have a value
             textFieldState.edit {
                 replace(0, length, address)
             }

@@ -53,6 +53,7 @@ class MapViewModel: ViewModel() {
     suspend fun getAddress(context: Context, location: LatLng): String = withContext(Dispatchers.IO) {
         try {
             val geocoder = Geocoder(context, Locale.getDefault())
+            Log.d("Address", "Location being searched: $location")
             val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
 
             if (!addresses.isNullOrEmpty()) {

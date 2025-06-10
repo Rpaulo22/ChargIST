@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.first
 import pt.ist.cmu.chargist.model.data.Charger
@@ -149,7 +150,8 @@ fun ChargerForm(
                 longitude = it?.longitude
             },
             mapViewModel = mapViewModel,
-            initInCurrentLocation = !edit
+            initInCurrentLocation = !edit,
+            starterCoords = LatLng(latitude!!, longitude!!)
         )
 
         Column(
