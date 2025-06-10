@@ -39,6 +39,9 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
     private val _invalidEmail = MutableStateFlow(false)
     val invalidEmail: StateFlow<Boolean> get() = _invalidEmail.asStateFlow()
 
+    private val _invalidUsername = MutableStateFlow(false)
+    val invalidUsername: StateFlow<Boolean> get() = _invalidUsername.asStateFlow()
+
     private val _invalidPassword = MutableStateFlow(false)
     val invalidPassword: StateFlow<Boolean> get() = _invalidPassword.asStateFlow()
 
@@ -59,6 +62,11 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
                     return@launch
                 }
                 _invalidEmail.value = false
+                if (!username.isValidUsername()) {
+                    _invalidUsername.value = true
+                    return@launch
+                }
+                _invalidUsername.value = false
                 if (!password.isValidPassword()) {
                     _invalidPassword.value = true
                     return@launch
@@ -92,7 +100,7 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
                             email,
                             username,
                             phoneNumber,
-                            emptyList(),
+                            mutableListOf<String>(),
                         )
                         viewModelScope.launch {
                             userRepository.insert(user)
@@ -113,6 +121,8 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
     }
 
     fun CharSequence?.isValidEmail() = !isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(this).matches()
+
+    fun CharSequence?.isValidUsername() = !isNullOrEmpty() && this.length >= 3
 
     fun CharSequence?.isValidPassword() = !isNullOrEmpty() && this.length >= 6
 }

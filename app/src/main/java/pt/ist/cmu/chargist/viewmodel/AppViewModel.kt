@@ -26,7 +26,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import pt.ist.cmu.chargist.model.data.AppDatabase
@@ -46,6 +49,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
     val allChargers: StateFlow<List<Charger>>
     val allChargingSlots: StateFlow<List<ChargingSlot>>
     val currentUser = MutableStateFlow<User?>(null)
+    val favoriteChargers: StateFlow<List<String>> = currentUser
+        .map { user -> user?.favoriteChargers ?: emptyList() }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptyList()
+        )
 
     val user = FirebaseAuth.getInstance().currentUser
     val uid = user!!.uid
@@ -93,7 +103,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                         email = data["email"] as String,
                         name = data["username"] as String,
                         phoneNumber = data["phoneNumber"] as String,
-                        favoriteChargers = data["favoriteChargers"] as List<String>
+                        favoriteChargers = data["favoriteChargers"] as MutableList<String>
                     )
                     userRepository.insert(remoteUser)
                     currentUser.value = remoteUser
@@ -451,6 +461,66 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 Log.e("Firebase", "Error updating rating", e)
             }
         return
+    }
+
+
+
+    fun favoriteCharger(charger: Charger) {
+        val db = Firebase.firestore
+        val userRef = db.collection("User").document(uid)
+        userRef.update("favoriteChargers", FieldValue.arrayUnion(charger.id))
+            .addOnSuccessListener {
+                viewModelScope.launch {
+                    val updatedUser = userRepository.getUserById(uid)
+                    val newFavorites = updatedUser!!.favoriteChargers.toMutableList()
+                    if (charger.id !in newFavorites) {
+                        newFavorites.add(charger.id)
+                    }
+                    userRepository.update(
+                        updatedUser.copy(
+                            favoriteChargers = newFavorites
+                        )
+                    )
+                    toggleFavorite(charger.id)
+                    Log.e("Firebase", "User {$uid} successfully added charger ${charger.id} to favorites")
+                }
+            }
+            .addOnFailureListener {
+                Log.e("Firebase", "User {$uid} had an error adding charger ${charger.id} to favorites")
+            }
+    }
+
+    fun unfavoriteCharger(charger: Charger) {
+        val db = Firebase.firestore
+        val userRef = db.collection("User").document(uid)
+        userRef.update("favoriteChargers", FieldValue.arrayRemove(charger.id))
+            .addOnSuccessListener {
+                viewModelScope.launch {
+                    val updatedUser = userRepository.getUserById(uid)
+                    val newFavorites = updatedUser!!.favoriteChargers.toMutableList()
+                    if (charger.id in newFavorites) {
+                        newFavorites.remove(charger.id)
+                    }
+                    userRepository.update(
+                        updatedUser.copy(
+                            favoriteChargers = newFavorites
+                        )
+                    )
+                    toggleFavorite(charger.id)
+                    Log.d("Firebase", "User {$uid} successfully removed charger ${charger.id} to favorites")
+                }
+            }
+            .addOnFailureListener {
+                Log.e("Firebase", "User {$uid} had an error removing charger ${charger.id} to favorites")
+            }
+    }
+
+    fun toggleFavorite(chargerId: String) {
+        val user = currentUser.value ?: return
+        val newFavorites = user.favoriteChargers.toMutableList().apply {
+            if (contains(chargerId)) remove(chargerId) else add(chargerId)
+        }
+        currentUser.value = user.copy(favoriteChargers = newFavorites)
     }
 }
 

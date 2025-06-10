@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +37,8 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private val authRepository: AuthRepository
     private val userRepository: UserRepository
 
+    val user = Firebase.auth.currentUser
+
     init {
         val firebaseAuth = FirebaseAuth.getInstance()
         val auth = Auth(firebaseAuth)
@@ -48,10 +51,11 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     fun loadCurrentUser() {
         viewModelScope.launch {
             try {
-
+                if (user != null && !authRepository.isGuest()) {
+                    _loginSuccess.value = true
+                }
                 _isLoadingUser.value = false
             } catch (e: Exception) {
-                // TODO: handle
                 Log.e("LoginViewModel", "loadCurrentUser(): caught an exception: $e")
             }
         }
@@ -74,11 +78,16 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun continueAsGuest() {
+    fun continueAsGuest(
+        username: String
+    ) {
         viewModelScope.launch {
             try {
-                authRepository.createGuestAccount()
-                addUserToDatabase("", "", "")
+                // if username is "" it means that the guest account has already been created
+                if (username != "") {
+                    authRepository.createGuestAccount()
+                    addUserToDatabase("", username, "")
+                }
                 _loginSuccess.value = true
             } catch (e: Exception) {
                 _loginFailure.value = true
@@ -111,7 +120,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     email,
                     username,
                     phoneNumber,
-                    emptyList(),
+                    mutableListOf<String>()
                 )
                 viewModelScope.launch {
                     userRepository.insert(user)
