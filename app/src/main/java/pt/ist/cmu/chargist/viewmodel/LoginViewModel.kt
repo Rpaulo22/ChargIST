@@ -35,6 +35,12 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     val isLoadingUser: StateFlow<Boolean>
         get() = _isLoadingUser.asStateFlow()
 
+    private val _isLoggingIn = MutableStateFlow(false)
+    val isLoggingIn: StateFlow<Boolean> get() = _isLoggingIn.asStateFlow()
+
+    private val _isLoggingInAsGuest = MutableStateFlow(false)
+    val isLoggingInAsGuest: StateFlow<Boolean> get() = _isLoggingInAsGuest.asStateFlow()
+
     private val authRepository: AuthRepository
     private val userRepository: UserRepository
 
@@ -66,7 +72,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         email: String,
         password: String,
     ) {
+        if (_isLoggingIn.value) return
         viewModelScope.launch {
+            _isLoggingInAsGuest.value = true
             try {
                 if (!email.isValidEmail()) {
                     throw IllegalArgumentException("Invalid email format")
@@ -86,7 +94,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     fun continueAsGuest(
         username: String
     ) {
+        if (_isLoggingInAsGuest.value) return
         viewModelScope.launch {
+            _isLoggingInAsGuest.value = true
             try {
                 // if username is "" it means that the guest account has already been created
                 if (username != "") {

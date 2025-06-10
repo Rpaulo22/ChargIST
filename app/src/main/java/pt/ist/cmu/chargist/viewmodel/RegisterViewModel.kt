@@ -48,6 +48,9 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
     private val _invalidRepeatPassword = MutableStateFlow(false)
     val invalidRepeatPassword: StateFlow<Boolean> get() = _invalidRepeatPassword.asStateFlow()
 
+    private val _isSigningUp = MutableStateFlow(false)
+    val isSigningUp: StateFlow<Boolean> get() = _isSigningUp.asStateFlow()
+
     fun signUp(
         email: String,
         username: String,
@@ -55,7 +58,9 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
         password: String,
         repeatPassword: String,
     ) {
+        if (_isSigningUp.value) return
         viewModelScope.launch {
+            _isSigningUp.value = true
             try {
                 if (!email.isValidEmail()) {
                     _invalidEmail.value = true
