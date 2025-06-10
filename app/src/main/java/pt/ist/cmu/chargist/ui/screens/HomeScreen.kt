@@ -18,6 +18,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -454,17 +455,25 @@ fun ChargerInformationPanel(
     var slotDialog by remember {mutableStateOf(false)}
     var selectedSlot by remember { mutableIntStateOf(0) }
 
+    val titleScrollState = rememberScrollState()
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Row (
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(end = 4.dp),
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(charger.name)
+                Text(
+                    text = charger.name,
+                    modifier = Modifier
+                        .horizontalScroll(titleScrollState)
+                        .weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 IconButton(
                     onClick = {
                         favourite = !favourite
