@@ -124,9 +124,9 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun CharSequence?.isValidEmail() = !isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(this).matches()
 
-}    fun CharSequence?.isValidEmail() = !isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(this).matches()
+    fun CharSequence?.isValidUsername() = !isNullOrEmpty() && this.length >= 3
 
-fun CharSequence?.isValidUsername() = !isNullOrEmpty() && this.length >= 3
-
-fun CharSequence?.isValidPassword() = !isNullOrEmpty() && this.length >= 6
+    fun CharSequence?.isValidPassword() = !isNullOrEmpty() && this.length >= 6
+}
