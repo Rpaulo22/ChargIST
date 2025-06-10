@@ -2,7 +2,10 @@ package pt.ist.cmu.chargist.ui.screens
 
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -24,6 +28,7 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
@@ -35,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,6 +87,8 @@ fun ChargerForm(
     var deletedSlots = remember { mutableStateListOf<ChargingSlot>() }
     
     var showDialog by remember { mutableStateOf(false) }
+    var selectedSlot by remember {mutableStateOf<ChargingSlot?>(null)}
+    var index by remember {mutableIntStateOf(-1)}
 
     var chargerName by remember { mutableStateOf("") }
     var chargingSlots = remember { mutableStateListOf<ChargingSlot>() }
@@ -181,23 +189,35 @@ fun ChargerForm(
             }
             Text("Current slots:")
             chargingSlots.forEach {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("• ${it.speed} - ${it.type}")
-                    IconButton(
-                        onClick = { 
-                            deletedSlots.add(it)
-                            chargingSlots.remove(it) 
+                Box (
+                    Modifier.clickable(
+                        onClick = {
+                            showDialog = true
+                            selectedSlot = it.copy()
+                            index = chargingSlots.indexOf(it)
                         }
+                    )
+                        .background(MaterialTheme.colorScheme.onSecondary, RoundedCornerShape(8.dp)),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.Cancel,
-                            contentDescription = "Remove Slot",
-                            tint = mainColor
-                        )
+                        Text("   ${it.speed} - ${it.type}")
+                        IconButton(
+                            onClick = {
+                                deletedSlots.add(it)
+                                chargingSlots.remove(it)
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Cancel,
+                                contentDescription = "Remove Slot",
+                                tint = mainColor
+                            )
+                        }
                     }
                 }
+                Spacer(Modifier.size(4.dp))
             }
 
             Spacer(Modifier.size(5.dp))
@@ -369,11 +389,16 @@ fun ChargerForm(
         }
         if (showDialog) {
             AddChargingSlotDialog(
-                onDismiss = { showDialog = false },
+                onDismiss = {
+                    showDialog = false
+                    selectedSlot = null
+                    index = -1
+                },
                 onConfirm = {
-                    chargingSlots.add(it)
-                    Log.d("Slots", "Added $it")
-                }
+                    if (selectedSlot == null) chargingSlots.add(it)
+                    else chargingSlots[index] = it
+                },
+                slot = selectedSlot,
             )
         }
     }
@@ -382,17 +407,20 @@ fun ChargerForm(
 @Composable
 fun AddChargingSlotDialog(
     onDismiss: () -> Unit,
-    onConfirm: (ChargingSlot) -> Unit
+    onConfirm: (ChargingSlot) -> Unit,
+    slot: ChargingSlot?
 ) {
+    var edit = (slot != null)
+
     var speedOptions = listOf("Slow", "Medium", "Fast")
-    val (selectedSpeed, onSpeedSelected) = remember { mutableStateOf(speedOptions[0]) }
+    val (selectedSpeed, onSpeedSelected) = remember { mutableStateOf(slot?.speed ?: speedOptions[0]) }
 
     var typeOptions = listOf("CCS2", "Type 2")
-    val (selectedType, onTypeSelected) = remember { mutableStateOf(typeOptions[0]) }
+    val (selectedType, onTypeSelected) = remember { mutableStateOf(slot?.type ?: typeOptions[0]) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add new Charging Slot") },
+        title = { Text(if (!edit) "Add new Charging Slot" else "Edit Charging Slot") },
         text = {
             Column(
                 verticalArrangement = Arrangement.Center,
@@ -469,13 +497,14 @@ fun AddChargingSlotDialog(
         confirmButton = {
             TextButton(onClick = {
                 val newSlot = ChargingSlot(
+                    id = slot?.id ?: "",
                     speed = selectedSpeed,
                     type = selectedType
                 )
                 onConfirm(newSlot)
                 onDismiss()
             }) {
-                Text("Add")
+                Text(if (!edit) "Add" else "Save")
             }
         },
         dismissButton = {

@@ -66,7 +66,7 @@ class MapViewModel: ViewModel() {
                     address.subAdminArea,
                     address.adminArea,
                     address.countryName
-                ).joinToString(", ")
+                ).distinct().filterNot {it.isBlank() }.joinToString(separator=", ")
             } else {
                 "Unknown address"
             }

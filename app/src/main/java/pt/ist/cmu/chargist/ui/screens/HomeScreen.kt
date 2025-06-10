@@ -94,6 +94,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -440,7 +441,7 @@ fun ChargerInformationPanel(
     var personalRating by remember { mutableStateOf(charger.ratings[uid] ?: 0.0) }
 
     var slotDialog by remember {mutableStateOf(false)}
-    var selectedSlot by remember {mutableStateOf(0)}
+    var selectedSlot by remember { mutableIntStateOf(0) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -504,16 +505,21 @@ fun ChargerInformationPanel(
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
                 // Charging Slots
-                Text("Charging slots:")
-                slots.forEach { slot ->
-                    ChargingSlotField(
-                        slot = slot,
-                        onClick = {
-                            selectedSlot = slots.indexOf(slot)
-                            slotDialog = true
-                        }
-                    )
-                    Spacer(Modifier.size(4.dp))
+                if (slots.isEmpty()) {
+                    Text("There are no registered Charging Slots here!", textAlign = TextAlign.Center)
+                }
+                else {
+                    Text("Charging slots:")
+                    slots.forEach { slot ->
+                        ChargingSlotField(
+                            slot = slot,
+                            onClick = {
+                                selectedSlot = slots.indexOf(slot)
+                                slotDialog = true
+                            }
+                        )
+                        Spacer(Modifier.size(4.dp))
+                    }
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
