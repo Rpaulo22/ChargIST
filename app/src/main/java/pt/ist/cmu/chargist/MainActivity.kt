@@ -29,10 +29,14 @@ import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import pt.ist.cmu.chargist.viewmodel.RegisterViewModel
 import pt.ist.cmu.chargist.viewmodel.SearchViewModel
 import kotlin.collections.listOf
+import com.google.android.libraries.places.api.Places
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (!Places.isInitialized()) {
+            Places.initialize(applicationContext, BuildConfig.MAPS_API_KEY)
+        }
         super.onCreate(savedInstanceState)
     }
 

@@ -580,8 +580,14 @@ fun ChargerInformationPanel(
                 Spacer(Modifier.size(6.dp))
                 RatingHistogram(charger.ratings)
 
+                HorizontalDivider(Modifier.padding(14.dp), thickness = 1.dp)
 
-                // todo sitios perto
+                RelevantNearbyServices(
+                    context,
+                    mapViewModel,
+                    charger.latitude,
+                    charger.longitude
+                )
             }
         },
         confirmButton = {
@@ -892,5 +898,48 @@ fun RatingHistogram(ratings: Map<String, Double>) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun RelevantNearbyServices(
+    context: Context,
+    mapViewModel: MapViewModel,
+    lat: Double,
+    lng: Double
+) {
+    val location = LatLng(lat, lng)
+    val result = remember { mutableStateListOf<List<String>>() }
+
+    LaunchedEffect(Unit) {
+        result.addAll(mapViewModel.getNearbyServices(context,location)?: listOf())
+        result.sortBy { it.getOrNull(3)?.toDoubleOrNull() ?: Double.MAX_VALUE } // sorts services by how close they are
+    }
+
+    Text("Nearby Services", fontSize = 32.sp)
+    Spacer(Modifier.size(10.dp))
+
+    for (info in result) {
+        Text(info[0], // name of service
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth(),
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp)
+        Spacer(Modifier.size(12.dp))
+        
+        Text("Type:\n${info[1]}", // type of service
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.size(8.dp))
+        
+        Text("Location:\n${info[2]}", // address of service
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.size(8.dp))
+        
+        Text("Distance from charger:\n${info[3].toString().substring(0,4)} km", // distance from charger to service
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth())
+        HorizontalDivider(Modifier.padding(10.dp), thickness = 1.dp)
     }
 }
