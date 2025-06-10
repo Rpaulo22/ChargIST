@@ -18,6 +18,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.database.DatabaseException
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
@@ -150,33 +152,94 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         }
     }
 
-    fun updateCharger(charger: Charger) {
+    fun updateCharger(chargerId: String, name:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
+                      lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double, deletedSlots: List<ChargingSlot>) {
+
+        if (priceFast < 0 || priceMedium < 0 || priceSlow < 0) {
+            throw Exception("Invalid price (must be positive).")
+        }
+        if (name.length < 3) {
+            throw Exception("Charger's name must have 3 characters or more.")
+        }
+        if (!(creditCard || cash || mbWay)) {
+            throw Exception("There must be an available payment method.")
+        }
+
+        val data = hashMapOf(
+            "name" to name,
+            "location" to GeoPoint(lat, lng),
+            "cash" to cash,
+            "creditCard" to creditCard,
+            "mbWay" to mbWay,
+            "price" to hashMapOf<String, Double>(
+                "fast" to priceFast,
+                "medium" to priceMedium,
+                "slow" to priceSlow
+            )
+        )
+
         val db = Firebase.firestore
+        db.runTransaction { tx ->
+            val refs = mutableListOf<DocumentReference>()
+            val chargerRef = db.collection("Charger").document(chargerId)
+            refs.add(chargerRef)
 
+            tx.update(chargerRef, data)
 
-    }
+            for (slot in slots) {
+                val slotData = mapOf(
+                    "speed" to slot.speed,
+                    "type" to slot.type
+                )
 
-    fun updateSlots() {
-        val db = Firebase.firestore
+                if (slot.id == "") {
+                    val slotRef = db.collection("ChargingSlot").document()
+                    refs.add(slotRef)
 
-        db.collection("ChargingSlot")
-            .get()
-            .addOnSuccessListener { result ->
-                for (document in result) {
-                    val slot = ChargingSlot(
-                        id = document.id,
-                        speed = document.data["speed"] as String,
-                        type = document.data["type"] as String
-                    )
-                    Log.d("Firebase", "id: ${document.id} | ${document.data}")
-                    viewModelScope.launch {
-                        slotRepository.insert(slot)
-                    }
+                    tx.set(slotRef, slotData)
+                }
+                else {
+                    val slotRef = db.collection("ChargingSlot").document(slot.id)
+                    tx.update(slotRef, slotData)
                 }
             }
-            .addOnFailureListener { exception ->
-                Log.w("Firebase", "Error getting documents.", exception)
+
+            for (slot in deletedSlots) {
+                val slotRef = db.collection("ChargingSlot").document(slot.id)
+                tx.delete(slotRef)
             }
+
+            val slotRefs =  refs.subList(1, refs.size).map { r -> r.id }
+            tx.update(chargerRef, "chargingSlots", slotRefs)
+
+            // return references to created documents, refs[0] ref do carregador, restantes refs dos slots
+            refs
+        }.addOnSuccessListener { refs ->
+            val finalChargingSlots = mutableListOf<ChargingSlot>()
+            var i = 1
+            for (slot in slots) {
+                var cs = slot
+                if (slot.id == "") { // slot without ids get id from firebase reference
+                    cs = ChargingSlot(refs[i].id, slot.speed, slot.type)
+                    i++
+                }
+                finalChargingSlots.add(cs)
+            }
+
+            val slotIds = finalChargingSlots.map { s -> s.id }
+
+            viewModelScope.launch {
+                for (slot in finalChargingSlots) {
+                    slotRepository.insert(slot)
+                }
+                for (slot in deletedSlots) {
+                    slotRepository.delete(slot)
+                }
+                chargerRepository.update(chargerId, name, slotIds, creditCard, mbWay, cash, lat, lng, priceFast, priceMedium, priceSlow)
+            }
+        }.addOnFailureListener {
+            throw Exception("Error creating charger. Please try again")
+        }
     }
 
     fun updateChargers() {
@@ -241,17 +304,61 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     }
 
-    fun createChargingSlot(speed: String, type: String) {
-        // id is randomized so that we can have multiple slots in the same list, not possible if all of them have the same default id
-        val newSlot = ChargingSlot(id = UUID.randomUUID().toString(), speed = speed, type = type)
-        lastSlot = newSlot
+    fun deleteCharger(chargerId: String) {
+        viewModelScope.launch {
+            val charger = getChargerById(chargerId)  // This will now wait properly
+
+            if (charger == null) {
+                Log.e("DeleteCharger", "Charger not found")
+                return@launch
+            }
+
+            val db = Firebase.firestore
+
+            try {
+                val querySnapshot = db.collection("User")
+                    .whereArrayContains("favoriteChargers", charger.id)
+                    .get()
+                    .await()
+
+                val userDocs = querySnapshot.documents
+
+                db.runTransaction { tx ->
+                    for (userDoc in userDocs) {
+                        val userRef = userDoc.reference
+                        tx.update(userRef, "favoriteChargers", FieldValue.arrayRemove(charger.id))
+                    }
+
+                    for (slotId in charger.chargingSlots) {
+                        val slotRef = db.collection("ChargingSlot").document(slotId)
+                        tx.delete(slotRef)
+                    }
+
+                    val chargerRef = db.collection("Charger").document(charger.id)
+                    tx.delete(chargerRef)
+                }.addOnSuccessListener {
+                    viewModelScope.launch {
+                        for (slotId in charger.chargingSlots) {
+                            slotRepository.delete(slotId)
+                        }
+                        // todo have it deleted in user local info
+                        chargerRepository.delete(charger)
+                        Log.d("DeleteCharger", "Successfully deleted charger and slots")
+                    }
+                }.addOnFailureListener {
+                    Log.e("DeleteCharger", "Transaction failed", it)
+                }
+
+            } catch (e: Exception) {
+                Log.e("DeleteCharger", "Error retrieving user documents", e)
+                throw e
+            }
+        }
     }
 
-    fun deleteCharger(charger: Charger) {
-        // todo delete on firestore aswell
-        viewModelScope.launch {
-            chargerRepository.delete(charger)
-        }
+
+    suspend fun getChargerById(id: String): Charger? {
+        return chargerRepository.getChargerById(id)
     }
 
     fun getCorrespondingChargingSlots(charger: Charger): Flow<List<ChargingSlot>> {
@@ -306,3 +413,4 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         return
     }
 }
+

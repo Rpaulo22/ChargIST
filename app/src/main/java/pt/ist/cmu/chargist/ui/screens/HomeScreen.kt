@@ -149,6 +149,7 @@ import java.security.AccessController.getContext
 fun HomeScreen(
     onAccountClick: () -> Unit,
     onCreateCharger: () -> Unit,
+    onEditCharger: (String) -> Unit,
     onSearchClick: () -> Unit,
     appViewModel: AppViewModel = viewModel(),
     mapViewModel: MapViewModel = viewModel(),
@@ -207,7 +208,7 @@ fun HomeScreen(
                 )
         }
     ) { paddingValues ->
-        Map(paddingValues, chargers, slots, userLocation, onCreateCharger, mapViewModel, appViewModel, centerPoint)
+        Map(paddingValues, chargers, slots, userLocation, onCreateCharger, onEditCharger, mapViewModel, appViewModel, centerPoint)
     }
 }
 
@@ -218,6 +219,7 @@ fun Map(
     slots: List<ChargingSlot>,
     userLocation: LatLng?,
     onCreateCharger: () -> Unit,
+    onEditCharger: (String) -> Unit,
     mapViewModel: MapViewModel,
     appViewModel: AppViewModel,
     centerPoint: LatLng?
@@ -293,8 +295,7 @@ fun Map(
     if (showChargerInformationPanel) {
         ChargerInformationPanel(
             onDismiss = { showChargerInformationPanel = false },
-            onConfirm = { charger: Charger ->
-                appViewModel.updateCharger(charger)},
+            onEditCharger = onEditCharger,
             charger = selectedCharger,
             mapViewModel = mapViewModel,
             appViewModel = appViewModel
@@ -413,7 +414,7 @@ fun SimpleMapMarker(
 fun ChargerInformationPanel(
     charger: Charger?,
     onDismiss: () -> Unit,
-    onConfirm: (Charger) -> Unit,
+    onEditCharger: (String) -> Unit,
     mapViewModel: MapViewModel,
     appViewModel: AppViewModel,
     favourites: List<String> = listOf<String>("Fczz0Yq4WAk8sF4hqq2K")
@@ -431,7 +432,7 @@ fun ChargerInformationPanel(
     var chargerAddress by remember { mutableStateOf("Loading...") }
     val modelProducer = remember { CartesianChartModelProducer() }
 
-    LaunchedEffect(Unit) { // launch  coroutine to obtain charger address
+    LaunchedEffect(Unit) { // launch coroutine to obtain charger address
         chargerAddress = mapViewModel.getAddress(context, LatLng(charger.latitude,charger.longitude))
 
         // column chart
@@ -549,23 +550,27 @@ fun ChargerInformationPanel(
                     modelProducer = modelProducer,
                     modifier = Modifier
                 )
-
-
                 // todo sitios perto, editar
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                if (personalRating != 0.0) appViewModel.rateCharger(charger, uid, personalRating)
-                onConfirm(charger)
-                onDismiss()
-            }) {
-                Text("Save")
+            if (uid == charger.ownerId) {
+                TextButton(
+                    onClick = {
+                        onEditCharger(charger.id)
+                        onDismiss()
+                    }) {
+                    Text("Edit")
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
+            TextButton(
+                onClick = {
+                    if (personalRating != 0.0) appViewModel.rateCharger(charger, uid, personalRating)
+                    onDismiss()
+                }) {
+                Text("Back")
             }
         }
     )

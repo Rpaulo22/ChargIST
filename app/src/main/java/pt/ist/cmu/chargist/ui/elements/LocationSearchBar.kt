@@ -48,27 +48,39 @@ import kotlin.math.exp
 fun LocationSearchBar (
     onLocationUpdate: (LatLng?) -> Unit,
     searchViewModel: SearchViewModel = viewModel(),
-    mapViewModel: MapViewModel
+    mapViewModel: MapViewModel,
+    initInCurrentLocation: Boolean = true,
+    starterCoords: LatLng = LatLng(0.0,0.0)
 ) {
     val context = LocalContext.current
-    val address = mapViewModel.currentAddress
-    LaunchedEffect(Unit) { // get current address when loading for first time
-        mapViewModel.fetchAddress(context)
-    }
-
+    var address = mapViewModel.currentAddress
     var textFieldState = remember { TextFieldState() }
 
-    // update the field when the address finally updates
-    LaunchedEffect(address) {
-        textFieldState.edit {
-            replace(0, length, address)
+    if (initInCurrentLocation) { // get address from current location
+        LaunchedEffect(Unit) { // get current address when loading for first time
+            mapViewModel.fetchAddress(context)
+        }
+        // update the field when the address finally updates
+        LaunchedEffect(address) {
+            textFieldState.edit {
+                replace(0, length, address)
+            }
         }
     }
+    else {
+        LaunchedEffect(Unit) { // get address from given coordinates when loading for first time
+            address = mapViewModel.getAddress(context, starterCoords)
+            textFieldState.edit {
+                replace(0, length, address)
+            }
+        }
+    }
+
     var expanded by rememberSaveable { mutableStateOf(false) }
     val locationResults by searchViewModel.locationSearchResults.collectAsState()
 
 
-    var usingMyLocation by remember { mutableStateOf(true)}
+    var usingMyLocation by remember { mutableStateOf(initInCurrentLocation)}
     val myLocation by mapViewModel.userLocation
     if (usingMyLocation) {
         Log.d("Search Location", "Initial location update with current location")

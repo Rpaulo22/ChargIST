@@ -20,11 +20,26 @@ interface ChargerDao {
     @Insert(onConflict = REPLACE)
     suspend fun insertCharger(charger: Charger)
 
+    @Delete
+    suspend fun deleteCharger(charger: Charger)
+
     @Update
     suspend fun updateCharger(charger: Charger)
 
-    @Delete
-    suspend fun deleteCharger(charger: Charger)
+    @Query("UPDATE charger " +
+            "SET name = :name," +
+            "chargingSlots = :slots," +
+            "creditCard = :creditCard," +
+            "mbWay = :mbWay," +
+            "cash = :cash," +
+            "latitude = :lat," +
+            "longitude = :lng," +
+            "priceFast = :priceFast," +
+            "priceMedium = :priceMedium," +
+            "priceSlow = :priceSlow " +
+            "WHERE id = :chargerId")
+    suspend fun updateCharger(chargerId: String, name:String, slots:List<String>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
+                              lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double)
 
     @Query("DELETE FROM charger")
     suspend fun deleteRelevantChargers() // todo this function should only delete chargers in a certain radius

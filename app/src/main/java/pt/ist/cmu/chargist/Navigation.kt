@@ -12,6 +12,9 @@ sealed class Screen(val route: String) {
     object Account : Screen("account")
     object Settings : Screen("settings")
     object CreateCharger: Screen("createCharger")
+    object EditCharger: Screen("editCharger/{id}") {
+        fun createRoute(id: String) = "editCharger/${id}"
+    }
     object Search: Screen("search")
 
 }

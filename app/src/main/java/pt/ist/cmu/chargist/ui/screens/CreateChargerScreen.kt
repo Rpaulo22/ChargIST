@@ -1,12 +1,9 @@
 package pt.ist.cmu.chargist.ui.screens
 
-import android.Manifest
-import android.location.Geocoder
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Cancel
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
@@ -31,13 +27,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -54,26 +50,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.auth.FirebaseAuth
-import okhttp3.Request
-import org.json.JSONObject
+import kotlinx.coroutines.flow.first
+import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.ui.elements.LocationSearchBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
-import java.nio.file.WatchEvent
-import java.util.Locale
-import java.util.UUID
 
 @Composable
-fun CreateChargerForm(
+fun ChargerForm(
     appViewModel: AppViewModel = viewModel(),
     mapViewModel: MapViewModel = viewModel(),
-    onCreateClick: () -> Unit
+    onCreateClick: () -> Unit,
+    chargerId: String? = null  // if id is not given, a new charger is created, else a given charger is edited
 ) {
     val context = LocalContext.current
+    
+    val edit = (chargerId != null)
 
     val user = FirebaseAuth.getInstance().currentUser
     val uid = user!!.uid
@@ -82,6 +77,8 @@ fun CreateChargerForm(
 
     val userLocation = mapViewModel.userLocation
 
+    var deletedSlots = remember { mutableStateListOf<ChargingSlot>() }
+    
     var showDialog by remember { mutableStateOf(false) }
 
     var chargerName by remember { mutableStateOf("") }
@@ -98,6 +95,36 @@ fun CreateChargerForm(
     var latitude by remember { mutableStateOf(userLocation.value?.latitude) }
     var longitude by remember { mutableStateOf(userLocation.value?.longitude) }
 
+    // if charger id != null, then form is for editing charger with said id
+    if (edit) {
+        val chargerState = remember { mutableStateOf<Charger?>(null) }
+
+        LaunchedEffect(Unit) {
+            chargerState.value = appViewModel.getChargerById(chargerId)
+        }
+
+        val charger = chargerState.value
+        Log.d("Edit Charger", "charger retrieved: $charger")
+
+        LaunchedEffect(charger) {
+            if (charger != null) { // in case there is some error retrieving charger from local db
+                Log.d("Edit Charger", "charger ${charger.name} is being edited")
+                val slots = appViewModel.getCorrespondingChargingSlots(charger).first()
+
+                chargerName = charger.name
+                chargingSlots.addAll(slots)
+                creditCard = charger.creditCard
+                mbWay = charger.mbWay
+                cash = charger.cash
+                priceFastInput = charger.priceFast.toString()
+                priceMediumInput = charger.priceMedium.toString()
+                priceSlowInput = charger.priceSlow.toString()
+                latitude = charger.latitude
+                longitude = charger.longitude
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -107,7 +134,7 @@ fun CreateChargerForm(
     ) {
         Spacer(Modifier.size(10.dp))
         Text(
-            text = "Creating new Charger",
+            text = if (!edit) "Creating new Charger" else "Editing Charger",
             fontWeight = FontWeight.Bold,
             fontSize = 34.sp,
             modifier = Modifier.fillMaxWidth(),
@@ -121,7 +148,8 @@ fun CreateChargerForm(
                 latitude = it?.latitude
                 longitude = it?.longitude
             },
-            mapViewModel = mapViewModel
+            mapViewModel = mapViewModel,
+            initInCurrentLocation = !edit
         )
 
         Column(
@@ -156,7 +184,10 @@ fun CreateChargerForm(
                 ) {
                     Text("• ${it.speed} - ${it.type}")
                     IconButton(
-                        onClick = { chargingSlots.remove(it) }
+                        onClick = { 
+                            deletedSlots.add(it)
+                            chargingSlots.remove(it) 
+                        }
                     ) {
                         Icon(
                             Icons.Default.Cancel,
@@ -261,31 +292,77 @@ fun CreateChargerForm(
             )
             Spacer(modifier = Modifier.size(24.dp))
 
-
-            Button(
-                onClick = {
-                    try {
-                        Log.d("LocationUpdate", "lat:$latitude | long:$longitude")
-                        appViewModel.createCharger(
-                            name = chargerName,
-                            ownerId = uid,
-                            slots = chargingSlots,
-                            creditCard = creditCard,
-                            cash = cash,
-                            mbWay = mbWay,
-                            priceFast = priceFast ?: 0.0,
-                            priceMedium = priceMedium ?: 0.0,
-                            priceSlow = priceSlow ?: 0.0,
-                            lat = latitude ?: 0.0,
-                            lng = longitude ?: 0.0
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                if (edit) {
+                    Button(
+                        onClick = {
+                            try {
+                                appViewModel.deleteCharger(chargerId)
+                                onCreateClick()
+                            } catch (e: Exception) {
+                                Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
+                            }
+                        },
+                        colors = ButtonColors(
+                            Color.Red,
+                            Color.White,
+                            Color.Transparent,
+                            Color.LightGray
                         )
-                        onCreateClick()
-                    } catch (e: Exception) {
-                        Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
-                    }
-                },
-                colors = ButtonColors(mainColor, Color.White, Color.Transparent, Color.LightGray)
-            ) { Text("Create new Charger") }
+                    ) { Text("Delete Charger") }
+                }
+
+                Button(
+                    onClick = {
+                        try {
+                            Log.d("LocationUpdate", "lat:$latitude | long:$longitude")
+                            if (!edit) {
+                                appViewModel.createCharger(
+                                    name = chargerName,
+                                    ownerId = uid,
+                                    slots = chargingSlots,
+                                    creditCard = creditCard,
+                                    cash = cash,
+                                    mbWay = mbWay,
+                                    priceFast = priceFast ?: 0.0,
+                                    priceMedium = priceMedium ?: 0.0,
+                                    priceSlow = priceSlow ?: 0.0,
+                                    lat = latitude ?: 0.0,
+                                    lng = longitude ?: 0.0
+                                )
+                            } else {
+                                appViewModel.updateCharger(
+                                    chargerId = chargerId,
+                                    name = chargerName,
+                                    slots = chargingSlots,
+                                    creditCard = creditCard,
+                                    cash = cash,
+                                    mbWay = mbWay,
+                                    priceFast = priceFast ?: 0.0,
+                                    priceMedium = priceMedium ?: 0.0,
+                                    priceSlow = priceSlow ?: 0.0,
+                                    lat = latitude ?: 0.0,
+                                    lng = longitude ?: 0.0,
+                                    deletedSlots = deletedSlots
+                                )
+                            }
+                            onCreateClick()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
+                        }
+                    },
+                    colors = ButtonColors(
+                        mainColor,
+                        Color.White,
+                        Color.Transparent,
+                        Color.LightGray
+                    )
+                ) { if (edit) Text("Save")
+                    else Text("Create new Charger") }
+            }
             Spacer(Modifier.size(30.dp))
         }
         if (showDialog) {
