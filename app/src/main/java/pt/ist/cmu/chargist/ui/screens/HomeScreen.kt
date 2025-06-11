@@ -79,6 +79,7 @@ import androidx.compose.runtime.ComposableTarget
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -101,6 +102,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -113,6 +115,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.colorspace.Rgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -151,6 +154,10 @@ import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import java.security.AccessController.getContext
 import androidx.core.net.toUri
+import kotlinx.coroutines.delay
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun HomeScreen(
@@ -718,7 +725,8 @@ fun ChargerInformationPanel(
             slot = slots[selectedSlot],
             number = selectedSlot,
             chargerName = charger.name,
-            onDismiss = {slotDialog = false}
+            onDismiss = {slotDialog = false},
+            appViewModel = appViewModel
         )
     }
 }
@@ -806,13 +814,19 @@ fun ChargingSlotField(
     slot: ChargingSlot,
     onClick: () -> Unit
 ) {
+    val currentTimestamp by rememberUpdatedState(Instant.now().toEpochMilli())
+
+    val occupied by remember { derivedStateOf { currentTimestamp <= slot.occupiedUntil }}
+
+    val color by remember { derivedStateOf { if (occupied) Color(199, 45, 45, 255) else mainColor }}
+
     Box(
         Modifier
             .background(colorScheme.background, RoundedCornerShape(8.dp))
             .padding(6.dp)
             .clickable(onClick = onClick)
     ) {
-        Text("${slot.speed} - ${slot.type}")
+        Text("${slot.speed} - ${slot.type}", color = color)
     }
 }
 
@@ -821,13 +835,25 @@ fun ChargingSlotDialog(
     slot: ChargingSlot,
     number: Int,
     chargerName: String,
-    onDismiss: () -> Unit) {
+    onDismiss: () -> Unit,
+    appViewModel: AppViewModel) {
+
+    val context = LocalContext.current
 
     val speed = when (slot.speed) {
         "Fast" -> 3
         "Medium" -> 2
         "Slow" -> 1
         else -> 0
+    }
+
+    var currentTimestamp by remember { mutableStateOf(Instant.now().toEpochMilli()) }
+
+    var occupied by remember { mutableStateOf(currentTimestamp <= slot.occupiedUntil)}
+
+    LaunchedEffect(slot) {
+        currentTimestamp = Instant.now().toEpochMilli()
+        occupied = currentTimestamp <= slot.occupiedUntil
     }
 
     AlertDialog(
@@ -883,6 +909,46 @@ fun ChargingSlotDialog(
                             modifier = Modifier.size(30.dp),
                             colorFilter = ColorFilter.tint(mainColor, blendMode = BlendMode.SrcAtop)
                         )
+                }
+
+                HorizontalDivider(Modifier.padding(10.dp), thickness = 1.dp)
+
+                Text(
+                    "Status:\n${if (occupied) "Occupied" else "Free"}",
+                    textAlign = TextAlign.Center)
+
+                Spacer(Modifier.size(10.dp))
+
+                if (!occupied) {
+                    Button(
+                        onClick = {
+                            try {
+                                appViewModel.occupySlot(slot.copy())
+                            }
+                            catch (e: Exception) {
+                                Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonColors(mainColor, colorScheme.background, Color.Gray, Color.LightGray)
+                    ) {Text("Mark as used")}
+                }
+                else if (slot.occupiedBy == appViewModel.uid) {
+                    Button(
+                        onClick = {
+                            try {
+                                appViewModel.freeSlot(slot.copy())
+                            }
+                            catch (e: Exception) {
+                                Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonColors(Color.Red, Color.White, Color.Gray, Color.LightGray)
+                    ) {Text("Stop using")}
+                }
+                else {
+                    Text("Charger is occupied until:\n" +
+                            "${Instant.ofEpochMilli(slot.occupiedUntil).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))}",
+                        textAlign = TextAlign.Center)
                 }
             }
         },

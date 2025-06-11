@@ -44,6 +44,7 @@ import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.model.data.User
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
 import pt.ist.cmu.chargist.model.repository.UserRepository
+import java.time.Instant
 import java.util.UUID
 import kotlin.math.round
 
@@ -160,7 +161,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             for (slot in slots) {
                 val slotData = hashMapOf(
                     "speed" to slot.speed,
-                    "type" to slot.type
+                    "type" to slot.type,
+                    "occupiedUntil" to 0,
+                    "occupiedBy" to ""
                 )
 
                 val slotRef = db.collection("ChargingSlot").document()
@@ -188,7 +191,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             val finalChargingSlots = mutableListOf<ChargingSlot>()
             var i = 1
             for (slot in slots) {
-                val cs = ChargingSlot(refs[i].id, slot.speed, slot.type)
+                val cs = ChargingSlot(refs[i].id, slot.speed, slot.type, 0, "")
                 finalChargingSlots.add(cs)
                 i++
             }
@@ -301,7 +304,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             for (slot in slots) {
                 var cs = slot
                 if (slot.id == "") { // slot without ids get id from firebase reference
-                    cs = ChargingSlot(refs[i].id, slot.speed, slot.type)
+                    cs = ChargingSlot(refs[i].id, slot.speed, slot.type, 0, "")
                     i++
                 }
                 finalChargingSlots.add(cs)
@@ -366,7 +369,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                                     val slot = ChargingSlot(
                                         id = document.id,
                                         speed = document.data["speed"].toString(),
-                                        type = document.data["type"].toString()
+                                        type = document.data["type"].toString(),
+                                        occupiedUntil = document.data["occupiedUntil"] as Long,
+                                        occupiedBy = document.data["occupiedBy"].toString()
                                     )
                                     viewModelScope.launch {
                                         slotRepository.insert(slot)
@@ -382,7 +387,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             .addOnFailureListener { exception ->
                 Log.w("Firebase", "Error getting chargers.", exception)
             }
-
     }
 
     fun deleteCharger(chargerId: String) {
@@ -553,6 +557,57 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             if (contains(chargerId)) remove(chargerId) else add(chargerId)
         }
         currentUser.value = user.copy(favoriteChargers = newFavorites)
+    }
+
+    fun occupySlot(slot: ChargingSlot) {
+        slot.occupiedBy = uid
+        slot.occupiedUntil = Instant.now().toEpochMilli() + 7200000 // 7200000 ms = 2 hours
+        val db = Firebase.firestore
+        val slotRef = db.collection("ChargingSlot").document(slot.id)
+
+        val slotData = mapOf(
+            "speed" to slot.speed,
+            "type" to slot.type,
+            "occupiedUntil" to slot.occupiedUntil,
+            "occupiedBy" to slot.occupiedBy
+        )
+
+        slotRef.update(slotData)
+            .addOnSuccessListener {
+                viewModelScope.launch {
+                    slotRepository.update(slot)
+                }
+            }
+            .addOnFailureListener {
+                Log.e("Firebase", "User {$uid} had an error occupying charger ${slot.id}")
+                throw Exception("Couldn't occupy charger. Please try again.")
+            }
+    }
+
+    fun freeSlot(slot: ChargingSlot) {
+        slot.occupiedBy = ""
+        slot.occupiedUntil = Instant.now().toEpochMilli() // declare occupied until now
+
+        val db = Firebase.firestore
+        val slotRef = db.collection("ChargingSlot").document(slot.id)
+
+        val slotData = mapOf(
+            "speed" to slot.speed,
+            "type" to slot.type,
+            "occupiedUntil" to slot.occupiedUntil,
+            "occupiedBy" to slot.occupiedBy
+        )
+
+        slotRef.update(slotData)
+            .addOnSuccessListener {
+                viewModelScope.launch {
+                    slotRepository.update(slot)
+                }
+            }
+            .addOnFailureListener {
+                Log.e("Firebase", "User {$uid} had an error freeing charger ${slot.id}")
+                throw Exception("Couldn't free charger. Please try again.")
+            }
     }
 }
 

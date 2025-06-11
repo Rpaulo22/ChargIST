@@ -7,5 +7,7 @@ import androidx.room.PrimaryKey
 data class ChargingSlot(
     @PrimaryKey val id:String = "",
     var speed:String,
-    var type:String
+    var type:String,
+    var occupiedUntil: Long,
+    var occupiedBy: String
 )

@@ -533,7 +533,9 @@ fun AddChargingSlotDialog(
                 val newSlot = ChargingSlot(
                     id = slot?.id ?: "",
                     speed = selectedSpeed,
-                    type = selectedType
+                    type = selectedType,
+                    occupiedUntil = 0,
+                    occupiedBy = ""
                 )
                 onConfirm(newSlot)
                 onDismiss()
