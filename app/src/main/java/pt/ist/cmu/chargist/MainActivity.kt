@@ -1,5 +1,8 @@
 package pt.ist.cmu.chargist
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -7,7 +10,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -111,6 +117,9 @@ fun AppNavigation() {
                 onCreateCharger = {
                     navController.navigate(Screen.CreateCharger.route)
                 },
+                onCreateChargerByHoldingOnMap = { latLng: LatLng ->
+                    navController.navigate(Screen.CreateChargerByHoldingOnMap.createRoute(latLng))
+                },
                 onEditCharger = { id: String ->
                     navController.navigate(Screen.EditCharger.createRoute(id))
                 },
@@ -173,6 +182,9 @@ fun AppNavigation() {
                 onCreateCharger = {
                     navController.navigate(Screen.CreateCharger.route)
                 },
+                onCreateChargerByHoldingOnMap = { latLng: LatLng ->
+                    navController.navigate(Screen.CreateChargerByHoldingOnMap.createRoute(latLng))
+                },
                 onEditCharger = { id: String ->
                     navController.navigate(Screen.EditCharger.createRoute(id))
                 },
@@ -221,6 +233,31 @@ fun AppNavigation() {
             )
         }
 
+        composable(
+            route = Screen.CreateChargerByHoldingOnMap.route,
+            arguments = listOf(
+                navArgument("lat") { type=NavType.FloatType },
+                navArgument("lng") { type=NavType.FloatType }
+            )
+        ) {
+            backStackEntry ->
+            val lat = backStackEntry.arguments?.getFloat("lat")
+            val lng = backStackEntry.arguments?.getFloat("lng")
+            val latLng = if (lat == null || lng == null) null else LatLng(lat.toDouble(),lng.toDouble())
+
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Screen.Home.route)
+            }
+            val appViewModel = viewModel<AppViewModel>(parentEntry)
+            val mapViewModel = viewModel<MapViewModel>(parentEntry)
+            ChargerForm(
+                appViewModel = appViewModel,
+                mapViewModel = mapViewModel,
+                onCreateClick = {navController.popBackStack()},
+                holdLatLng = latLng
+            )
+        }
+
         composable (
             route = Screen.EditCharger.route,
             arguments = listOf(
@@ -242,4 +279,34 @@ fun AppNavigation() {
             )
         }
     }
+}
+
+// function that verifies if client has connection to internet
+@Composable
+fun connectionStatus(): Boolean {
+    val context = LocalContext.current
+    val connected = remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                connected.value = true
+            }
+
+            override fun onLost(network: Network) {
+                connected.value = false
+            }
+        }
+
+        connectivityManager.registerDefaultNetworkCallback(callback)
+
+        onDispose {
+            connectivityManager.unregisterNetworkCallback(callback)
+        }
+    }
+
+    return connected.value
 }
