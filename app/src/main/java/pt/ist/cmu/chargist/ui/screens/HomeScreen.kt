@@ -1,6 +1,7 @@
 package pt.ist.cmu.chargist.ui.screens
 
 import android.Manifest
+import android.R.attr.bitmap
 import android.R.attr.navigationIcon
 import android.R.attr.rating
 import android.R.attr.text
@@ -8,6 +9,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Paint
 import android.location.Location
 import android.net.Uri
@@ -115,11 +118,13 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.colorspace.Rgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -521,7 +526,7 @@ fun ChargerInformationPanel(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                ChargerImage(charger, favourite)
+                ChargerImage(appViewModel, charger, favourite)
 
                 Spacer(Modifier.size(10.dp))
 
@@ -732,22 +737,36 @@ fun ChargerInformationPanel(
 
 @Composable
 fun ChargerImage(
+    appViewModel: AppViewModel,
     charger:Charger,
     favourite: Boolean
 ) {
-    val imgUrl: String? = null // todo actually sacate the image from firebase
+    var isLoading by remember { mutableStateOf(true) }
 
-    val painter = rememberAsyncImagePainter(
-        ImageRequest.Builder(LocalContext.current)
-            .data(imgUrl)
-            .allowHardware(false)
-            .build()
-    )
+    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(Unit) {
+        val photoBytes = appViewModel.downloadChargerPhoto(charger.id)
+        isLoading = false
+        if (photoBytes != null) {
+            bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.size)
+        }
+    }
 
     // Charger Picture
-    if (!imgUrl.isNullOrEmpty()) {
+    if (isLoading) {
+        Text(
+            text="Loading Image...",
+            textAlign = TextAlign.Center,
+            color = mainColor,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+    else if (bitmap != null) {
         Image(
-            painter = painter,
+            bitmap = bitmap!!.asImageBitmap(),
             contentDescription = "Charger Image",
             modifier = Modifier
                 .fillMaxWidth()

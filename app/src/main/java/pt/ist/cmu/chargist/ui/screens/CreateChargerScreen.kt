@@ -51,6 +51,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,6 +71,7 @@ import coil.compose.rememberImagePainter
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import pt.ist.cmu.chargist.BuildConfig
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargingSlot
@@ -119,6 +121,12 @@ fun ChargerForm(
     var priceFast = priceFastInput.replace(",", ".").toDoubleOrNull()
     var latitude by remember { mutableStateOf(userLocation.value?.latitude) }
     var longitude by remember { mutableStateOf(userLocation.value?.longitude) }
+
+    var capturedImageUri by remember {
+        mutableStateOf<Uri>(Uri.EMPTY)
+    }
+
+    val coroutineScope = rememberCoroutineScope()
 
     // if charger id != null, then form is for editing charger with said id
     if (edit) {
@@ -194,7 +202,10 @@ fun ChargerForm(
             )
             Spacer(Modifier.size(10.dp))
 
-            Camera()
+            Camera(
+                capturedImageUri = capturedImageUri,
+                changeCapturedImageUri = { newCapturedImageUri -> capturedImageUri = newCapturedImageUri }
+                )
 
             Spacer(Modifier.size(5.dp))
             HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
@@ -365,41 +376,47 @@ fun ChargerForm(
 
                 Button(
                     onClick = {
-                        try {
-                            Log.d("LocationUpdate", "lat:$latitude | long:$longitude")
-                            if (!edit) {
-                                appViewModel.createCharger(
-                                    name = chargerName,
-                                    ownerId = uid,
-                                    slots = chargingSlots,
-                                    creditCard = creditCard,
-                                    cash = cash,
-                                    mbWay = mbWay,
-                                    priceFast = priceFast ?: 0.0,
-                                    priceMedium = priceMedium ?: 0.0,
-                                    priceSlow = priceSlow ?: 0.0,
-                                    lat = latitude ?: 0.0,
-                                    lng = longitude ?: 0.0
-                                )
-                            } else {
-                                appViewModel.updateCharger(
-                                    chargerId = chargerId,
-                                    name = chargerName,
-                                    slots = chargingSlots,
-                                    creditCard = creditCard,
-                                    cash = cash,
-                                    mbWay = mbWay,
-                                    priceFast = priceFast ?: 0.0,
-                                    priceMedium = priceMedium ?: 0.0,
-                                    priceSlow = priceSlow ?: 0.0,
-                                    lat = latitude ?: 0.0,
-                                    lng = longitude ?: 0.0,
-                                    deletedSlots = deletedSlots
-                                )
+                        coroutineScope.launch {
+                            try {
+                                Log.d("LocationUpdate", "lat:$latitude | long:$longitude")
+                                if (!edit) {
+                                    appViewModel.createCharger(
+                                        context = context,
+                                        name = chargerName,
+                                        ownerId = uid,
+                                        slots = chargingSlots,
+                                        creditCard = creditCard,
+                                        cash = cash,
+                                        mbWay = mbWay,
+                                        priceFast = priceFast ?: 0.0,
+                                        priceMedium = priceMedium ?: 0.0,
+                                        priceSlow = priceSlow ?: 0.0,
+                                        lat = latitude ?: 0.0,
+                                        lng = longitude ?: 0.0,
+                                        capturedImageUri = capturedImageUri
+                                    )
+                                } else {
+                                    appViewModel.updateCharger(
+                                        context = context,
+                                        chargerId = chargerId,
+                                        name = chargerName,
+                                        slots = chargingSlots,
+                                        creditCard = creditCard,
+                                        cash = cash,
+                                        mbWay = mbWay,
+                                        priceFast = priceFast ?: 0.0,
+                                        priceMedium = priceMedium ?: 0.0,
+                                        priceSlow = priceSlow ?: 0.0,
+                                        lat = latitude ?: 0.0,
+                                        lng = longitude ?: 0.0,
+                                        deletedSlots = deletedSlots,
+                                        capturedImageUri = capturedImageUri
+                                    )
+                                }
+                                onCreateClick()
+                            } catch (e: Exception) {
+                                Log.e("Error", e.toString())
                             }
-                            onCreateClick()
-                        } catch (e: Exception) {
-                            Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
                         }
                     },
                     colors = ButtonColors(
@@ -552,7 +569,10 @@ fun AddChargingSlotDialog(
 }
 
 @Composable
-fun Camera() {
+fun Camera(
+    capturedImageUri: Uri,
+    changeCapturedImageUri: (Uri) -> Unit,
+) {
     val context = LocalContext.current
     val file = context.createImageFile()
     val uri = FileProvider.getUriForFile(
@@ -560,12 +580,8 @@ fun Camera() {
         BuildConfig.APPLICATION_ID + ".provider", file
     )
 
-    var capturedImageUri by remember {
-        mutableStateOf<Uri>(Uri.EMPTY)
-    }
-
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        if (success) capturedImageUri = uri
+        if (success) changeCapturedImageUri(uri)
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -605,7 +621,7 @@ fun Camera() {
                         fileToDelete.delete()
                         Toast.makeText(context, "Image Deleted", Toast.LENGTH_SHORT).show()
                     }
-                    capturedImageUri = Uri.EMPTY
+                    changeCapturedImageUri(Uri.EMPTY)
                 }) {
                     Text("Take another Image (NOTE: nothing is done with the image right now)")
                 }
