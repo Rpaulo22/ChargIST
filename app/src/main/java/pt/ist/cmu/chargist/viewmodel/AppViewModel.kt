@@ -6,6 +6,7 @@ import android.app.Application
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.runtime.currentRecomposeScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -38,16 +40,19 @@ import kotlinx.coroutines.tasks.await
 import org.imperiumlabs.geofirestore.GeoFirestore
 import org.imperiumlabs.geofirestore.extension.setLocation
 import pt.ist.cmu.chargist.model.data.AppDatabase
+import pt.ist.cmu.chargist.model.data.Auth
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.model.data.User
+import pt.ist.cmu.chargist.model.repository.AuthRepository
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
 import pt.ist.cmu.chargist.model.repository.UserRepository
 import java.util.UUID
 import kotlin.math.round
 
 class AppViewModel(application: Application) : AndroidViewModel(application)  {
+    private val authRepository: AuthRepository
     private val userRepository: UserRepository
     private val chargerRepository: ChargerRepository
     private val slotRepository: ChargingSlotRepository
@@ -69,9 +74,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
 
     init {
+        val firebaseAuth = FirebaseAuth.getInstance()
+        val auth = Auth(firebaseAuth)
         val userDao = AppDatabase.getDatabase(application).userDao()
         val chargerDao = AppDatabase.getDatabase(application).chargerDao()
         val chargingSlotDao = AppDatabase.getDatabase(application).chargingSlotDao()
+        authRepository = AuthRepository(auth)
         userRepository = UserRepository(userDao)
         chargerRepository = ChargerRepository(chargerDao)
         slotRepository = ChargingSlotRepository(chargingSlotDao)
@@ -422,7 +430,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                         for (slotId in charger.chargingSlots) {
                             slotRepository.delete(slotId)
                         }
-                        // todo have it deleted in user local info
+                        // delete removed charger from all users' favorite chargers
+                        val allUsers = userRepository.getAllUsers()
+                        for (user in allUsers) {
+                            val newFavorites = user.favoriteChargers.toMutableList()
+                            if (newFavorites.contains(charger.id)) {
+                                newFavorites.remove(charger.id)
+                                userRepository.update(
+                                    user.copy(
+                                        favoriteChargers = newFavorites
+                                    )
+                                )
+                            }
+                        }
                         slotRepository.delete(charger.chargingSlots)
                         chargerRepository.delete(charger)
                         Log.d("DeleteCharger", "Successfully deleted charger and slots")
@@ -447,51 +467,95 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         return slotRepository.getSlots(charger.chargingSlots)
     }
 
-    fun rateCharger(charger: Charger, uid: String, rating: Double) {
+    fun rateCharger(charger: Charger, rating: Double) {
         val db = Firebase.firestore
 
-        // add/update the rating
-        db.collection("Charger")
-            .document(charger.id)
-            .update("ratings.$uid", rating)
-            .addOnSuccessListener {
-                Log.d("Firebase", "Rating successfully updated")
+        // delete the rating
+        if (rating == 0.0) {
+            db.collection("Charger")
+                .document(charger.id)
+                .update("ratings.$uid", FieldValue.delete())
+                .addOnSuccessListener {
+                    viewModelScope.launch {
+                        val updatedCharger = chargerRepository.getChargerById(charger.id)
+                        val newRatings = updatedCharger.ratings.toMutableMap()
+                        newRatings.remove(uid)
 
-                viewModelScope.launch {
-                    val updatedCharger = chargerRepository.getChargerById(charger.id)
-                    val newRatings = updatedCharger.ratings.toMutableMap()
-                    newRatings[uid] = rating
+                        // calculate the new mean score
+                        val newRatingsMean = if (newRatings.isNotEmpty()) {
+                            val avg = newRatings.values.average()
+                            round(avg * 100) / 100
+                        } else {
+                            0.0
+                        }
 
-                    // calculate the new mean score
-                    val newRatingsMean = if (newRatings.isNotEmpty()) {
-                        val avg = newRatings.values.average()
-                        round(avg * 100) / 100
-                    } else {
-                        0.0
-                    }
-
-                    chargerRepository.update(
-                        updatedCharger.copy(
-                            ratings = newRatings,
-                            ratingsMean = newRatingsMean
+                        chargerRepository.update(
+                            updatedCharger.copy(
+                                ratings = newRatings,
+                                ratingsMean = newRatingsMean
+                            )
                         )
-                    )
 
-                    // update the mean rating
-                    db.collection("Charger")
-                        .document(charger.id)
-                        .update("ratingsMean", newRatingsMean)
-                        .addOnSuccessListener {
-                            Log.d("Firebase", "Mean rating successfully updated")
-                        }
-                        .addOnFailureListener { e ->
-                            Log.e("Firebase", "Error updating mean rating", e)
-                        }
+                        // update the mean rating
+                        db.collection("Charger")
+                            .document(charger.id)
+                            .update("ratingsMean", newRatingsMean)
+                            .addOnSuccessListener {
+                                Log.d("Firebase", "Mean rating successfully updated")
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("Firebase", "Error updating mean rating", e)
+                            }
+                        Log.d("Firebase", "Rating successfully deleted")
+                    }
                 }
-            }
-            .addOnFailureListener { e ->
-                Log.e("Firebase", "Error updating rating", e)
-            }
+                .addOnFailureListener { e ->
+                    Log.e("Firebase", "Error deleting rating", e)
+                }
+        }
+        else {
+            // add/update the rating
+            db.collection("Charger")
+                .document(charger.id)
+                .update("ratings.$uid", rating)
+                .addOnSuccessListener {
+                    viewModelScope.launch {
+                        val updatedCharger = chargerRepository.getChargerById(charger.id)
+                        val newRatings = updatedCharger.ratings.toMutableMap()
+                        newRatings[uid] = rating
+
+                        // calculate the new mean score
+                        val newRatingsMean = if (newRatings.isNotEmpty()) {
+                            val avg = newRatings.values.average()
+                            round(avg * 100) / 100
+                        } else {
+                            0.0
+                        }
+
+                        chargerRepository.update(
+                            updatedCharger.copy(
+                                ratings = newRatings,
+                                ratingsMean = newRatingsMean
+                            )
+                        )
+
+                        // update the mean rating
+                        db.collection("Charger")
+                            .document(charger.id)
+                            .update("ratingsMean", newRatingsMean)
+                            .addOnSuccessListener {
+                                Log.d("Firebase", "Mean rating successfully updated")
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("Firebase", "Error updating mean rating", e)
+                            }
+                        Log.d("Firebase", "Rating successfully updated")
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Log.e("Firebase", "Error updating rating", e)
+                }
+        }
         return
     }
 
@@ -553,6 +617,34 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             if (contains(chargerId)) remove(chargerId) else add(chargerId)
         }
         currentUser.value = user.copy(favoriteChargers = newFavorites)
+    }
+
+    fun deleteAccount() {
+        try {
+            viewModelScope.launch {
+                Log.e("AppViewModel", "1")
+                val uidAux = currentUser.value!!.id
+                val chargerList = allChargers.first()
+                Log.e("AppViewModel", allChargers.value.toString())
+                chargerList.forEach { charger ->
+                    // delete all chargers owned by the to be deleted user
+                    if (charger.ownerId == uidAux) {
+                        deleteCharger(charger.id)
+                    }
+                    // delete all ratings owned by the to be deleted user
+                    else if (charger.ratings.containsKey(uidAux) ) {
+                        rateCharger(charger, 0.0)
+                    }
+                }
+                Log.e("AppViewModel", "2")
+                // delete the user
+                authRepository.deleteAccount()
+                userRepository.delete(currentUser.value!!)
+           }
+            Log.d("AppViewModel", "Successfully deleted user account")
+        } catch (e: Exception) {
+            Log.e("AppViewModel", "Caught an exception: $e")
+        }
     }
 }
 
