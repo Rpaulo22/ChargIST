@@ -1176,7 +1176,7 @@ fun MapLongClickDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Create charger here?: $clickedLatLng")
+            Text("Create charger here?")
         },
         confirmButton = {
             TextButton(
