@@ -1155,9 +1155,7 @@ fun RelevantNearbyServices(
             Spacer(Modifier.size(8.dp))
 
             Text(
-                "Distance from charger: ${
-                    info[3].toString().substring(0, 4)
-                } km", // distance from charger to service
+                "Distance from charger : ${info[3]} km", // distance from charger to service
                 textAlign = TextAlign.Start,
                 modifier = Modifier.fillMaxWidth()
             )

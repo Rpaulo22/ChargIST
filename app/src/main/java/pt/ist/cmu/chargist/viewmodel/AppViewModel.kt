@@ -133,17 +133,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         }
     }
 
-    fun isConnected(context: Context): Boolean {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
-    }
-
     val isCreatingCharger = MutableStateFlow(false)
 
     fun createCharger(context:Context, name:String, ownerId:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
@@ -185,6 +174,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             "ratingsMean" to 0.0,
         )
 
+        Log.d("Create", "Charger is $data")
+
         val db = Firebase.firestore
         db.runTransaction { tx ->
             val refs = mutableListOf<DocumentReference>()
@@ -200,6 +191,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     "occupiedBy" to ""
                 )
 
+                Log.d("SlotData", "Slot being sent to firebase is $slot")
+
                 val slotRef = db.collection("ChargingSlot").document()
                 refs.add(slotRef)
 
@@ -207,6 +200,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             }
 
             val slotRefs =  refs.subList(1, refs.size).map { r -> r.id }
+            Log.d("SlotData", "Slots being saved to charger are $slotRefs")
             tx.update(chargerRef, "chargingSlots", slotRefs)
 
             // return references to created documents, refs[0] ref do carregador, restantes refs dos slots
@@ -251,7 +245,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     slotRepository.insert(slot)
                 }
                 chargerRepository.insert(c)
-                uploadChargerPhoto(context, refs[0].id, capturedImageUri)
+                if (capturedImageUri != Uri.EMPTY)
+                    uploadChargerPhoto(context, refs[0].id, capturedImageUri)
             }
         }.addOnFailureListener {
             throw Exception("Error creating charger. Please try again")
@@ -298,8 +293,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             for (slot in slots) {
                 val slotData = mapOf(
                     "speed" to slot.speed,
-                    "type" to slot.type
+                    "type" to slot.type,
+                    "occupiedBy" to slot.occupiedBy,
+                    "occupiedUntil" to slot.occupiedUntil
                 )
+
+                Log.d("SlotData", "Slot being sent to firebase is $slot")
 
                 if (slot.id == "") {
                     val slotRef = db.collection("ChargingSlot").document()
@@ -309,6 +308,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 }
                 else {
                     val slotRef = db.collection("ChargingSlot").document(slot.id)
+                    refs.add(slotRef)
                     tx.update(slotRef, slotData)
                 }
             }
@@ -319,6 +319,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             }
 
             val slotRefs =  refs.subList(1, refs.size).map { r -> r.id }
+            Log.d("SlotData", "Slots being saved in charger are $slotRefs")
             tx.update(chargerRef, "chargingSlots", slotRefs)
 
             // return references to created documents, refs[0] ref do carregador, restantes refs dos slots
@@ -355,7 +356,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     slotRepository.delete(slot)
                 }
                 chargerRepository.update(chargerId, name, slotIds, creditCard, mbWay, cash, lat, lng, priceFast, priceMedium, priceSlow)
-                uploadChargerPhoto(context, chargerId, capturedImageUri)
+                if (capturedImageUri != Uri.EMPTY)
+                    uploadChargerPhoto(context, chargerId, capturedImageUri)
             }
         }.addOnFailureListener {
             throw Exception("Error creating charger. Please try again")
@@ -428,7 +430,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     fun deleteCharger(chargerId: String) {
         viewModelScope.launch {
-            val charger = getChargerById(chargerId)  // This will now wait properly
+            val charger = getChargerById(chargerId)
 
             if (charger == null) {
                 Log.e("DeleteCharger", "Charger not found")
