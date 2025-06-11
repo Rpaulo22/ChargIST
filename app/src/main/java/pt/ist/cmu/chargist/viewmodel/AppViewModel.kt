@@ -430,7 +430,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     fun deleteCharger(chargerId: String) {
         viewModelScope.launch {
-            val charger = getChargerById(chargerId)  // This will now wait properly
+            val charger = getChargerById(chargerId)
 
             if (charger == null) {
                 Log.e("DeleteCharger", "Charger not found")
