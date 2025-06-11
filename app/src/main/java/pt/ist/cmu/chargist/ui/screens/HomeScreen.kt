@@ -458,6 +458,8 @@ fun ChargerInformationPanel(
     val titleScrollState = rememberScrollState()
 
     AlertDialog(
+        modifier = Modifier
+            .padding(vertical = 24.dp),
         onDismissRequest = onDismiss,
         title = {
             Row (
@@ -591,17 +593,6 @@ fun ChargerInformationPanel(
             }
         },
         confirmButton = {
-            if (uid == charger.ownerId) {
-                TextButton(
-                    onClick = {
-                        onEditCharger(charger.id)
-                        onDismiss()
-                    }) {
-                    Text("Edit")
-                }
-            }
-        },
-        dismissButton = {
             TextButton(
                 onClick = {
                     if (favouriteChanged) {
@@ -616,6 +607,17 @@ fun ChargerInformationPanel(
                     onDismiss()
                 }) {
                 Text("Back")
+            }
+        },
+        dismissButton = {
+            if (uid == charger.ownerId) {
+                TextButton(
+                    onClick = {
+                        onEditCharger(charger.id)
+                        onDismiss()
+                    }) {
+                    Text("Edit")
+                }
             }
         }
     )
@@ -917,7 +919,7 @@ fun RelevantNearbyServices(
     }
 
     Text("Nearby Services", fontSize = 32.sp)
-    Spacer(Modifier.size(10.dp))
+    Spacer(Modifier.size(20.dp))
 
     for (info in result) {
         Text(info[0], // name of service
@@ -927,7 +929,7 @@ fun RelevantNearbyServices(
             fontSize = 16.sp)
         Spacer(Modifier.size(12.dp))
         
-        Text("Type:\n${info[1]}", // type of service
+        Text("Type: ${info[1]}", // type of service
             textAlign = TextAlign.Start,
             modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.size(8.dp))
@@ -937,7 +939,7 @@ fun RelevantNearbyServices(
             modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.size(8.dp))
         
-        Text("Distance from charger:\n${info[3].toString().substring(0,4)} km", // distance from charger to service
+        Text("Distance from charger: ${info[3].toString().substring(0,4)} km", // distance from charger to service
             textAlign = TextAlign.Start,
             modifier = Modifier.fillMaxWidth())
         HorizontalDivider(Modifier.padding(10.dp), thickness = 1.dp)

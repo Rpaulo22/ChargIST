@@ -1,7 +1,14 @@
 package pt.ist.cmu.chargist.ui.screens
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -54,16 +62,25 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
+import coil.compose.rememberImagePainter
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.first
+import pt.ist.cmu.chargist.BuildConfig
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.ui.elements.LocationSearchBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.AppViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Objects
 
 @Composable
 fun ChargerForm(
@@ -136,13 +153,13 @@ fun ChargerForm(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 8.dp, vertical = 20.dp),
+            .padding(horizontal = 10.dp, vertical = 40.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.size(10.dp))
         Text(
-            text = if (!edit) "Creating new Charger" else "Editing Charger",
+            text = if (!edit) "Creating Charger" else "Editing Charger",
             fontWeight = FontWeight.Bold,
             fontSize = 34.sp,
             modifier = Modifier.fillMaxWidth(),
@@ -161,6 +178,8 @@ fun ChargerForm(
             starterCoords = LatLng(latitude!!, longitude!!)
         )
 
+        Spacer(Modifier.size(5.dp))
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -173,7 +192,13 @@ fun ChargerForm(
                 onValueChange = { chargerName = it },
                 label = { Text("Charger Name") }
             )
-            Spacer(Modifier.size(20.dp))
+            Spacer(Modifier.size(10.dp))
+
+            Camera()
+
+            Spacer(Modifier.size(5.dp))
+            HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
+            Spacer(Modifier.size(5.dp))
 
             Button(
                 onClick = { showDialog = true },
@@ -311,7 +336,9 @@ fun ChargerForm(
                 singleLine = true,
                 suffix = { Text("€/kWh") }
             )
-            Spacer(modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.size(12.dp))
+            HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
+            Spacer(modifier = Modifier.size(12.dp))
 
             Row(
                 Modifier.fillMaxWidth(),
@@ -333,7 +360,7 @@ fun ChargerForm(
                             Color.Transparent,
                             Color.LightGray
                         )
-                    ) { Text("Delete Charger") }
+                    ) { Text("Delete") }
                 }
 
                 Button(
@@ -419,7 +446,15 @@ fun AddChargingSlotDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (!edit) "Add new Charging Slot" else "Edit Charging Slot") },
+        title = {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = if (!edit) "Add Charging Slot" else "Edit Charging Slot",
+                    modifier = Modifier.align(Alignment.Center),
+                    textAlign = TextAlign.Center
+                )
+            }
+        },
         text = {
             Column(
                 verticalArrangement = Arrangement.Center,
@@ -512,4 +547,94 @@ fun AddChargingSlotDialog(
             }
         }
     )
+}
+
+@Composable
+fun Camera() {
+    val context = LocalContext.current
+    val file = context.createImageFile()
+    val uri = FileProvider.getUriForFile(
+        Objects.requireNonNull(context),
+        BuildConfig.APPLICATION_ID + ".provider", file
+    )
+
+    var capturedImageUri by remember {
+        mutableStateOf<Uri>(Uri.EMPTY)
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) capturedImageUri = uri
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        if (it) {
+            Toast.makeText(context, "Permission Granted", Toast.LENGTH_SHORT).show()
+            cameraLauncher.launch(uri)
+        } else {
+            Toast.makeText(context, "Permission Denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (capturedImageUri != Uri.EMPTY) {
+            capturedImageUri.let {
+                Image(
+                    painter = rememberAsyncImagePainter(it),
+                    contentDescription = "Captured Image",
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .size(400.dp)
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Button(
+                    colors = ButtonColors(mainColor, Color.White, Color.Transparent, Color.LightGray),
+                    onClick = {
+                    // Delete the file
+                    val fileToDelete = File(uri.path ?: "")
+                    if (fileToDelete.exists()) {
+                        fileToDelete.delete()
+                        Toast.makeText(context, "Image Deleted", Toast.LENGTH_SHORT).show()
+                    }
+                    capturedImageUri = Uri.EMPTY
+                }) {
+                    Text("Take another Image (NOTE: nothing is done with the image right now)")
+                }
+            }
+        }
+        else {
+            Button(
+                colors = ButtonColors(mainColor, Color.White, Color.Transparent, Color.LightGray),
+                onClick = {
+                    val permissionCheckResult =
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                    if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
+                        cameraLauncher.launch(uri)
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                }
+            }) {
+                Text(text = "Capture Image From Camera")
+            }
+        }
+    }
+}
+
+fun Context.createImageFile(): File {
+    // Create an image file name
+    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+    val imageFileName = "JPEG_" + timeStamp + "_"
+    val image = File.createTempFile(
+        imageFileName, /* prefix */
+        ".jpg", /* suffix */
+        externalCacheDir      /* directory */
+    )
+    return image
 }

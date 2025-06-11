@@ -119,7 +119,11 @@ private fun AccountScreenContent (
             Column (
             ) {
                 if (isGuest()) {
-                    Text(text = "You're a guest", fontSize = 24.sp)
+                    Text(
+                        text = "You're a guest",
+                        modifier = Modifier.padding(4.dp),
+                        fontSize = 24.sp
+                    )
                 }
                 Text(
                     text = buildAnnotatedString {
@@ -133,6 +137,7 @@ private fun AccountScreenContent (
                             append(currentUser?.name ?: "")
                         }
                     },
+                    modifier = Modifier.padding(4.dp),
                     fontSize = 24.sp
                 )
 
@@ -142,43 +147,62 @@ private fun AccountScreenContent (
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { goToLoginScreen() }
+                            .height(40.dp)
+                            .clickable { goToLoginScreen() },
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Log in")
+                        Text(
+                            text = "Log in",
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     HorizontalDivider(thickness = 1.dp)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { goToRegisterScreen() }
+                            .height(40.dp)
+                            .clickable { goToRegisterScreen() },
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Register")
+                        Text(
+                            text = "Register",
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     HorizontalDivider(thickness = 1.dp)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                 }
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { signOut() }
+                        .height(40.dp)
+                        .clickable { signOut() },
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Log Out")
+                    Text(
+                        text = "Log Out",
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
                 }
             }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showDeleteDialog = true }
+                    .height(40.dp)
+                    .clickable { showDeleteDialog = true },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
             ) {
                 Text(
                     text = "Delete Account",
+                    modifier = Modifier.padding(end = 4.dp),
                     color = Color.Red
                 )
             }
