@@ -14,6 +14,9 @@ interface ChargerDao {
     @Query("SELECT * FROM charger ORDER BY id DESC")
     fun getAllChargers(): Flow<List<Charger>>
 
+    @Query("SELECT * FROM charger ORDER BY id DESC")
+    suspend fun getEveryCharger(): List<Charger>
+
     @Query("SELECT * FROM charger WHERE id = :chargerId LIMIT 1")
     suspend fun getChargerById(chargerId: String): Charger
 
