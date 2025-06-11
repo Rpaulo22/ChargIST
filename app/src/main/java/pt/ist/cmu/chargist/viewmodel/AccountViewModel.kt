@@ -57,17 +57,4 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
-
-    fun deleteAccount() {
-        try {
-            viewModelScope.launch {
-                authRepository.deleteAccount()
-                userRepository.delete(currentUser.value!!)
-                _shouldRestartApp.value = true
-            }
-            Log.d("AccountViewModel", "Successfully deleted user account")
-        } catch (e: Exception) {
-            Log.e("AccountViewModel", "Caught an exception: $e")
-        }
-    }
 }

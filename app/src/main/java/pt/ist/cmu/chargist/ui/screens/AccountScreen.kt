@@ -65,6 +65,7 @@ fun AccountScreen(
     appViewModel: AppViewModel = viewModel()
 ) {
     val currentUser by appViewModel.currentUser.collectAsState()
+    val chargers by appViewModel.allChargers.collectAsState()
     val context = LocalContext.current
     val shouldRestartApp by accountViewModel.shouldRestartApp.collectAsStateWithLifecycle()
     if (shouldRestartApp) {
@@ -74,7 +75,7 @@ fun AccountScreen(
             currentUser = currentUser,
             isGuest = accountViewModel::isGuest,
             signOut = accountViewModel::signOut,
-            deleteAccount = accountViewModel::deleteAccount,
+            deleteAccount = appViewModel::deleteAccount,
             goToHomeScreen = goToHomeScreen,
             goToLoginScreen = goToLoginScreen,
             goToRegisterScreen = goToRegisterScreen,
@@ -217,6 +218,7 @@ private fun AccountScreenContent (
                     TextButton(onClick = {
                         deleteAccount()
                         showDeleteDialog = false
+                        goToLoginScreen()
                     }) {
                         Text("Delete", color = Color.Red)
                     }

@@ -456,7 +456,6 @@ fun ChargerInformationPanel(
     }
 
     var favourite by remember { mutableStateOf(favoriteChargers?.contains(charger.id) == true )}
-    Log.e("test", favoriteChargers.toString())
     var favouriteChanged by remember { mutableStateOf(false) }
 
     val slotsFlow = appViewModel.getCorrespondingChargingSlots(charger)
@@ -702,7 +701,7 @@ fun ChargerInformationPanel(
                             appViewModel.unfavoriteCharger(charger)
                         }
                     }
-                    if (personalRatingChanged) appViewModel.rateCharger(charger, uid, personalRating)
+                    if (personalRatingChanged) appViewModel.rateCharger(charger, personalRating)
                     onDismiss()
                 }) {
                 Text("Back")
