@@ -6,9 +6,11 @@ import android.R.attr.rating
 import android.R.attr.text
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Paint
 import android.location.Location
+import android.net.Uri
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
@@ -47,6 +49,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Star
@@ -145,6 +148,7 @@ import pt.ist.cmu.chargist.R
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import java.security.AccessController.getContext
+import androidx.core.net.toUri
 
 @Composable
 fun HomeScreen(
@@ -455,7 +459,7 @@ fun ChargerInformationPanel(
     var slotDialog by remember {mutableStateOf(false)}
     var selectedSlot by remember { mutableIntStateOf(0) }
 
-    val titleScrollState = rememberScrollState()
+    var titleScrollState = rememberScrollState()
 
     AlertDialog(
         modifier = Modifier
@@ -473,8 +477,7 @@ fun ChargerInformationPanel(
                     modifier = Modifier
                         .horizontalScroll(titleScrollState)
                         .weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1
                 )
                 IconButton(
                     onClick = {
@@ -512,8 +515,45 @@ fun ChargerInformationPanel(
             ) {
                 ChargerImage(charger, favourite)
 
+                Spacer(Modifier.size(10.dp))
+
                 // Address of charger
-                Text(chargerAddress, textAlign = TextAlign.Center)
+                Row (
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ){
+                    Text(
+                        text = chargerAddress,
+                        textAlign = TextAlign.Start,
+                        modifier = Modifier
+                            .weight(1f)
+                    )
+
+                    IconButton(
+                        onClick = {
+                        val gmmIntentUri =
+                            "https://www.google.com/maps/dir/?api=1&destination=${charger.latitude},${charger.longitude}&travelmode=driving".toUri()
+                        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                        mapIntent.setPackage("com.google.android.apps.maps")
+                        if (mapIntent.resolveActivity(context.packageManager) != null) {
+                            context.startActivity(mapIntent)
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Google Maps app not found.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }) {
+                        Icon(
+                            Icons.Default.Directions,
+                            contentDescription = "Directions",
+                            modifier = Modifier.size(40.dp),
+                            tint = mainColor
+                        )
+                    }
+                }
+
 
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
