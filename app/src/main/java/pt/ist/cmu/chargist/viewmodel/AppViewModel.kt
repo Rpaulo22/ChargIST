@@ -4,6 +4,8 @@ import android.R
 import android.R.attr.name
 import android.app.Application
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.currentRecomposeScope
@@ -125,6 +127,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 }
             }
         }
+    }
+
+    fun isConnected(context: Context): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
     }
 
     fun createCharger(name:String, ownerId:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,

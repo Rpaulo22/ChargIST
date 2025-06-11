@@ -10,6 +10,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Paint
 import android.location.Location
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
 import android.os.Looper
 import android.util.Log
@@ -158,6 +162,7 @@ import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.compose.runtime.DisposableEffect
 
 @Composable
 fun HomeScreen(
@@ -225,6 +230,36 @@ fun HomeScreen(
     }
 }
 
+// function that verifies if client has connection to internet
+@Composable
+fun connectionStatus(): Boolean {
+    val context = LocalContext.current
+    val connected = remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                connected.value = true
+            }
+
+            override fun onLost(network: Network) {
+                connected.value = false
+            }
+        }
+
+        connectivityManager.registerDefaultNetworkCallback(callback)
+
+        onDispose {
+            connectivityManager.unregisterNetworkCallback(callback)
+        }
+    }
+
+    return connected.value
+}
+
 @Composable
 fun Map(
     paddingValues: PaddingValues,
@@ -237,9 +272,12 @@ fun Map(
     appViewModel: AppViewModel,
     centerPoint: LatLng?
 ) {
+    val context = LocalContext.current
     val favoriteChargers by appViewModel.favoriteChargers.collectAsState()
 
     var showChargerInformationPanel by remember { mutableStateOf(false) }
+
+    var connected = connectionStatus()
 
     var selectedCharger by remember { mutableStateOf<Charger?>(null) } // charger whose information panel is showing
 
@@ -292,7 +330,11 @@ fun Map(
         }
 
         IconButton(
-            onClick = onCreateCharger,
+            onClick = {
+                if (connected) onCreateCharger()
+                else Toast.makeText(context, "Please connect to the internet to create new chargers", Toast.LENGTH_SHORT).show()
+            },
+
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(paddingValues)
@@ -439,7 +481,6 @@ fun ChargerInformationPanel(
     appViewModel: AppViewModel,
     favoriteChargers: List<String>
 ) {
-
     val context = LocalContext.current
 
     val uid = appViewModel.uid
@@ -455,7 +496,7 @@ fun ChargerInformationPanel(
         chargerAddress = mapViewModel.getAddress(context, LatLng(charger.latitude,charger.longitude))
     }
 
-    var favourite by remember { mutableStateOf(favoriteChargers?.contains(charger.id) == true )}
+    var favourite by remember { mutableStateOf(favoriteChargers.contains(charger.id) == true )}
     var favouriteChanged by remember { mutableStateOf(false) }
 
     val slotsFlow = appViewModel.getCorrespondingChargingSlots(charger)
@@ -575,7 +616,6 @@ fun ChargerInformationPanel(
                                 Text("Directions")
                             }
                         }
-
                         Button(
                             onClick = {
                                 val mapsUrl =
@@ -656,6 +696,7 @@ fun ChargerInformationPanel(
                 Text("Fast price: ${charger.priceFast} €/kWh")
 
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
+
                 // Ratings
                 Row (
                     verticalAlignment = Alignment.CenterVertically
@@ -1069,36 +1110,56 @@ fun RelevantNearbyServices(
 ) {
     val location = LatLng(lat, lng)
     val result = remember { mutableStateListOf<List<String>>() }
+    val connected = connectionStatus()
+    var hasPolled = false
 
-    LaunchedEffect(Unit) {
-        result.addAll(mapViewModel.getNearbyServices(context,location)?: listOf())
-        result.sortBy { it.getOrNull(3)?.toDoubleOrNull() ?: Double.MAX_VALUE } // sorts services by how close they are
+    LaunchedEffect(connected) {
+        if (!hasPolled) {
+            result.addAll(mapViewModel.getNearbyServices(context, location) ?: listOf())
+            result.sortBy {it.getOrNull(3)?.toDoubleOrNull() ?: Double.MAX_VALUE} // sorts services by how close they are
+            hasPolled = true
+        }
     }
 
-    Text("Nearby Services", fontSize = 32.sp)
-    Spacer(Modifier.size(20.dp))
+    if (connected) {
+        Text("Nearby Services", fontSize = 32.sp)
+        Spacer(Modifier.size(20.dp))
 
-    for (info in result) {
-        Text(info[0], // name of service
-            textAlign = TextAlign.Start,
-            modifier = Modifier.fillMaxWidth(),
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp)
-        Spacer(Modifier.size(12.dp))
-        
-        Text("Type: ${info[1]}", // type of service
-            textAlign = TextAlign.Start,
-            modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.size(8.dp))
-        
-        Text("Location:\n${info[2]}", // address of service
-            textAlign = TextAlign.Start,
-            modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.size(8.dp))
-        
-        Text("Distance from charger: ${info[3].toString().substring(0,4)} km", // distance from charger to service
-            textAlign = TextAlign.Start,
-            modifier = Modifier.fillMaxWidth())
-        HorizontalDivider(Modifier.padding(10.dp), thickness = 1.dp)
+        for (info in result) {
+            Text(
+                info[0], // name of service
+                textAlign = TextAlign.Start,
+                modifier = Modifier.fillMaxWidth(),
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Spacer(Modifier.size(12.dp))
+
+            Text(
+                "Type: ${info[1]}", // type of service
+                textAlign = TextAlign.Start,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.size(8.dp))
+
+            Text(
+                "Location:\n${info[2]}", // address of service
+                textAlign = TextAlign.Start,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.size(8.dp))
+
+            Text(
+                "Distance from charger: ${
+                    info[3].toString().substring(0, 4)
+                } km", // distance from charger to service
+                textAlign = TextAlign.Start,
+                modifier = Modifier.fillMaxWidth()
+            )
+            HorizontalDivider(Modifier.padding(10.dp), thickness = 1.dp)
+        }
+    }
+    else {
+        Text("Connect to the internet to view services near this charger!", textAlign = TextAlign.Center)
     }
 }

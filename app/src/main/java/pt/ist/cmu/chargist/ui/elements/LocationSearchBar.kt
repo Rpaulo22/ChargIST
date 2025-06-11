@@ -68,12 +68,13 @@ fun LocationSearchBar (
         }
     }
     else {
-        LaunchedEffect(Unit) { // get address from given coordinates when loading for first time
-            address = mapViewModel.getAddress(context, starterCoords!!) // if not initInCurrentLocation, then starterCoords should have a value
-            textFieldState.edit {
-                replace(0, length, address)
+        if (starterCoords != null)
+            LaunchedEffect(Unit) { // get address from given coordinates when loading for first time
+                address = mapViewModel.getAddress(context, starterCoords) // if not initInCurrentLocation, then starterCoords should have a value
+                textFieldState.edit {
+                    replace(0, length, address)
+                }
             }
-        }
     }
 
     var expanded by rememberSaveable { mutableStateOf(false) }

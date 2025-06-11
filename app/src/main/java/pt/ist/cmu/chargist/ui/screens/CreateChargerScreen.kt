@@ -92,6 +92,7 @@ fun ChargerForm(
     val context = LocalContext.current
     
     val edit = (chargerId != null)
+    var dataLoaded by remember {mutableStateOf(!edit)} // indicates if charger info has been loaded
 
     val user = FirebaseAuth.getInstance().currentUser
     val uid = user!!.uid
@@ -117,8 +118,15 @@ fun ChargerForm(
     var priceSlow = priceSlowInput.replace(",", ".").toDoubleOrNull()
     var priceMedium = priceMediumInput.replace(",", ".").toDoubleOrNull()
     var priceFast = priceFastInput.replace(",", ".").toDoubleOrNull()
-    var latitude by remember { mutableStateOf(userLocation.value?.latitude) }
-    var longitude by remember { mutableStateOf(userLocation.value?.longitude) }
+    var latitude by remember { mutableStateOf<Double?>(null) }
+    var longitude by remember { mutableStateOf<Double?>(null) }
+
+    if (!edit) {
+        userLocation.value?.let {
+            latitude = it.latitude
+            longitude = it.longitude
+        }
+    }
 
     // if charger id != null, then form is for editing charger with said id
     if (edit) {
@@ -147,6 +155,7 @@ fun ChargerForm(
                 latitude = charger.latitude
                 longitude = charger.longitude
             }
+            dataLoaded = true
         }
     }
 
@@ -167,17 +176,19 @@ fun ChargerForm(
         )
         Spacer(Modifier.size(10.dp))
         Text("This charger will be placed at:")
-        LocationSearchBar(
-            onLocationUpdate = {
-                Log.d("LocationUpdate", "$it")
-                latitude = it?.latitude
-                longitude = it?.longitude
-            },
-            mapViewModel = mapViewModel,
-            initInCurrentLocation = !edit,
-            starterCoords = LatLng(latitude!!, longitude!!)
-        )
 
+        if (dataLoaded && latitude != null && longitude != null) {
+            LocationSearchBar(
+                onLocationUpdate = {
+                    Log.d("LocationUpdate", "$it")
+                    latitude = it?.latitude
+                    longitude = it?.longitude
+                },
+                mapViewModel = mapViewModel,
+                initInCurrentLocation = if (userLocation.value != null) !edit else false,
+                starterCoords = LatLng(latitude!!, longitude!!)
+            )
+        }
         Spacer(Modifier.size(5.dp))
 
         Column(

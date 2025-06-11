@@ -137,7 +137,8 @@ class MapViewModel: ViewModel() {
             val ignoredTypes = listOf("Locality", "General Contractor", "Insurance Agency",
                 "Jewelry Store", "Finance", "Real Estate Agency", "Accounting",
                 "Furniture Store", "School", "Neighborhood", "Secondary School", "Parking",
-                "Sublocality Level 1")
+                "Sublocality Level 1", "Point Of Interest", "Moving Company", "Transit Station",
+                "Local Government Office")
 
             val client = OkHttpClient()
 
