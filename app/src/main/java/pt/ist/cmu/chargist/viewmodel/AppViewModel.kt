@@ -144,8 +144,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                         capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
     }
 
-    fun createCharger(name:String, ownerId:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
-                      lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double) {
     val isCreatingCharger = MutableStateFlow(false)
 
     fun createCharger(context:Context, name:String, ownerId:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
