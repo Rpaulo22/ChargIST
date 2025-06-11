@@ -35,6 +35,7 @@ import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargerDao
 import pt.ist.cmu.chargist.model.data.ChargingSlot
+import pt.ist.cmu.chargist.model.data.ChargingSlotDao
 import pt.ist.cmu.chargist.model.firebase.queryDocumentsAtLocation
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
@@ -49,9 +50,12 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
 
     val travelTimes = mutableMapOf<LatLng, Pair<LatLng, Float>>() // marker location -> <user location, travel time>
 
+    val chargerDao: ChargerDao
+    val chargingSlotDao: ChargingSlotDao
+
     init {
-        val chargerDao = AppDatabase.getDatabase(application).chargerDao()
-        val chargingSlotDao = AppDatabase.getDatabase(application).chargingSlotDao()
+        chargerDao = AppDatabase.getDatabase(application).chargerDao()
+        chargingSlotDao = AppDatabase.getDatabase(application).chargingSlotDao()
         chargerRepository = ChargerRepository(chargerDao)
         slotRepository = ChargingSlotRepository(chargingSlotDao)
         allChargers = chargerRepository.allChargers.stateIn(
@@ -120,16 +124,13 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
             // Não faço ideia porquê, mas isto faz o primeiro collect com o estado inicial se a lista estiver vazia faz-se duas vezes e está resolvido, se de facto estiver vazio, também não se perde nada
             val n = if (allChargers.value.isEmpty()) 2 else 1
             allChargers.take(n).collect { chargers ->
-                // Atualizar carregadores em torno da localização
-                val db = Firebase.firestore
-                val chargerRef = db.collection("charger")
-                val geoFirestore = GeoFirestore(chargerRef)
-
-                Log.d("GeoFirebase", "'Bout'a do sum' geo queries")
-                val res = geoFirestore.queryDocumentsAtLocation(GeoPoint(location.latitude, location.longitude), maxDistance)
-                Log.d("GeoFirebase", "Geo query results = $res")
-
-                // BD local
+                // Atualizar BD
+                reloadChargersOnLocation(
+                    GeoPoint(location.latitude, location.longitude),
+                    maxDistance,
+                    chargerDao,
+                    chargingSlotDao
+                )
 
                 Log.d("Search Charger", "AllChargers=" + chargers)
 
@@ -277,16 +278,6 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
             2 -> return c.priceFast
         }
         return Double.MAX_VALUE
-    }
-
-    private fun calcDistance(loc1: LatLng, loc2: LatLng): Float {
-        val results = FloatArray(1)
-        Location.distanceBetween(
-            loc1.latitude, loc1.longitude,
-            loc2.latitude, loc2.longitude, results
-        )
-
-        return results[0]/1000 // result in km
     }
 
     private fun getTravelTime(origin: LatLng, destination: LatLng): Float? {
