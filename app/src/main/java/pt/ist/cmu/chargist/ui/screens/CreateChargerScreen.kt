@@ -94,7 +94,7 @@ fun ChargerForm(
     val context = LocalContext.current
     
     val edit = (chargerId != null)
-    var dataLoaded by remember {mutableStateOf(!edit)} // indicates if charger info has been loaded
+    var dataLoaded by remember {mutableStateOf(false)} // indicates if charger info has been loaded
 
     val user = FirebaseAuth.getInstance().currentUser
     val uid = user!!.uid
@@ -123,11 +123,12 @@ fun ChargerForm(
     var latitude by remember { mutableStateOf<Double?>(null) }
     var longitude by remember { mutableStateOf<Double?>(null) }
 
-    if (!edit) {
+    if (!edit && !dataLoaded) {
         userLocation.value?.let {
             latitude = it.latitude
             longitude = it.longitude
         }
+        dataLoaded = true
     }
 
     var capturedImageUri by remember {
@@ -191,6 +192,7 @@ fun ChargerForm(
                     Log.d("LocationUpdate", "$it")
                     latitude = it?.latitude
                     longitude = it?.longitude
+                    Log.d("LocationUpdate", "after $latitude $longitude")
                 },
                 mapViewModel = mapViewModel,
                 initInCurrentLocation = if (userLocation.value != null) !edit else false,
@@ -198,7 +200,7 @@ fun ChargerForm(
             )
         }
         Spacer(Modifier.size(5.dp))
-
+        Log.d("Bug", "Currently, charger will be placed at: $latitude | $longitude")
         Column(
             modifier = Modifier
                 .fillMaxSize()

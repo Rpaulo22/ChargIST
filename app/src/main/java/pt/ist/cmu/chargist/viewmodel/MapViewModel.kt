@@ -195,7 +195,7 @@ class MapViewModel: ViewModel() {
                         lat, lng, distance
                     )
 
-                    val distanceString = String.format(Locale.ENGLISH, "%.2f", distance[0]/1000)
+                    val distanceString = String.format(Locale.getDefault(), "%.2f", distance[0]/1000)
 
                     results.add(listOf(name,type,vicinity,distanceString))
                 }

@@ -1,29 +1,16 @@
 package pt.ist.cmu.chargist.viewmodel
 
-import android.R
-import android.R.attr.name
 import android.app.Application
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.net.Uri
 import android.util.Log
-import android.widget.Toast
-import androidx.compose.runtime.currentRecomposeScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.tasks.Tasks.await
-import com.google.android.libraries.places.api.Places
-import com.google.android.libraries.places.api.model.CircularBounds
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DatabaseException
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
@@ -35,11 +22,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import org.imperiumlabs.geofirestore.GeoFirestore
@@ -53,9 +38,7 @@ import pt.ist.cmu.chargist.model.data.User
 import pt.ist.cmu.chargist.model.repository.AuthRepository
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
 import pt.ist.cmu.chargist.model.repository.UserRepository
-import java.io.File
 import java.time.Instant
-import java.util.UUID
 import kotlin.math.round
 
 class AppViewModel(application: Application) : AndroidViewModel(application)  {
@@ -101,7 +84,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             emptyList()
         )
 
-        updateChargers()
+        reloadChargers()
 
         // get current user
         viewModelScope.launch {
@@ -139,6 +122,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                       lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow:Double, capturedImageUri:Uri) {
 
         if (isCreatingCharger.value) {
+            Log.d("Create", "Not creating :(")
             return
         }
         else {
@@ -174,7 +158,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             "ratingsMean" to 0.0,
         )
 
-        Log.d("Create", "Charger is $data")
+        Log.d("Create", "Charger is being placed at ${data["location"]}")
 
         val db = Firebase.firestore
         db.runTransaction { tx ->
@@ -200,7 +184,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             }
 
             val slotRefs =  refs.subList(1, refs.size).map { r -> r.id }
-            Log.d("SlotData", "Slots being saved to charger are $slotRefs")
             tx.update(chargerRef, "chargingSlots", slotRefs)
 
             // return references to created documents, refs[0] ref do carregador, restantes refs dos slots
@@ -247,6 +230,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 chargerRepository.insert(c)
                 if (capturedImageUri != Uri.EMPTY)
                     uploadChargerPhoto(context, refs[0].id, capturedImageUri)
+                isCreatingCharger.value = false
             }
         }.addOnFailureListener {
             throw Exception("Error creating charger. Please try again")
@@ -255,6 +239,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     fun updateCharger(context:Context, chargerId: String, name:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
                       lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double, deletedSlots: List<ChargingSlot>, capturedImageUri: Uri) {
+
+        if (isCreatingCharger.value) {
+            Log.d("Create", "Not creating :(")
+            return
+        }
+        else {
+            isCreatingCharger.value = true
+        }
 
         if (priceFast < 0 || priceMedium < 0 || priceSlow < 0) {
             throw Exception("Invalid price (must be more or equal than 0 €/kWh).")
@@ -319,7 +311,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             }
 
             val slotRefs =  refs.subList(1, refs.size).map { r -> r.id }
-            Log.d("SlotData", "Slots being saved in charger are $slotRefs")
             tx.update(chargerRef, "chargingSlots", slotRefs)
 
             // return references to created documents, refs[0] ref do carregador, restantes refs dos slots
@@ -358,13 +349,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 chargerRepository.update(chargerId, name, slotIds, creditCard, mbWay, cash, lat, lng, priceFast, priceMedium, priceSlow)
                 if (capturedImageUri != Uri.EMPTY)
                     uploadChargerPhoto(context, chargerId, capturedImageUri)
+                isCreatingCharger.value = false
             }
         }.addOnFailureListener {
             throw Exception("Error creating charger. Please try again")
         }
     }
 
-    fun updateChargers() {
+    fun reloadChargers() {
         val db = Firebase.firestore
 
         viewModelScope.launch {
@@ -461,6 +453,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     val chargerRef = db.collection("Charger").document(charger.id)
                     tx.delete(chargerRef)
                 }.addOnSuccessListener {
+                    val geoFirestore = GeoFirestore(db.collection("charger"))
+                    geoFirestore.removeLocation(chargerId)
+
                     viewModelScope.launch {
                         for (slotId in charger.chargingSlots) {
                             slotRepository.delete(slotId)
