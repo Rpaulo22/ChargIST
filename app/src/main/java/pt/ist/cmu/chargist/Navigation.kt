@@ -12,6 +12,9 @@ sealed class Screen(val route: String) {
     object Account : Screen("account")
     object Settings : Screen("settings")
     object CreateCharger: Screen("createCharger")
+    object CreateChargerByHoldingOnMap: Screen("createChargerByHoldingOnMap/{lat}/{lng}") {
+        fun createRoute(latLng: LatLng) = "createChargerByHoldingOnMap/${latLng.latitude}/${latLng.longitude}"
+    }
     object EditCharger: Screen("editCharger/{id}") {
         fun createRoute(id: String) = "editCharger/${id}"
     }

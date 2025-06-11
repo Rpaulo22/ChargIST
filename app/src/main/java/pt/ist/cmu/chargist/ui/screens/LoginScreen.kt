@@ -60,6 +60,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import pt.ist.cmu.chargist.R
+import pt.ist.cmu.chargist.connectionStatus
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.LoginViewModel
 import kotlin.math.log
@@ -71,6 +72,7 @@ fun LoginScreen(
     goToRegisterScreen: () -> Unit,
 ) {
     val context = LocalContext.current
+    val connected = connectionStatus()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val state = remember { TextFieldState() }
@@ -151,10 +153,8 @@ fun LoginScreen(
         }
         OutlinedButton(
             onClick = {
-                loginViewModel.signIn(
-                    email,
-                    password,
-                )
+                if (connected) loginViewModel.signIn(email, password)
+                else Toast.makeText(context, "Please connect to the internet to login", Toast.LENGTH_SHORT).show()
             },
             colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
@@ -164,7 +164,8 @@ fun LoginScreen(
         OutlinedButton(
             onClick = {
                 if (loginViewModel.user == null) {
-                    showGuestUsernameDialog = true
+                    if (connected) showGuestUsernameDialog = true
+                    else Toast.makeText(context, "Please connect to the internet to create guest account", Toast.LENGTH_SHORT).show()
                 } else {
                     loginViewModel.continueAsGuest("")
                 }
@@ -175,11 +176,15 @@ fun LoginScreen(
         ) { Text("Continue as Guest") }
         Spacer(Modifier.size(5.dp))
         TextButton(
-            onClick = {goToRegisterScreen()},
+
+            onClick = {
+                if (connected) goToRegisterScreen()
+                else Toast.makeText(context, "Please connect to the internet to register", Toast.LENGTH_SHORT).show()},
         ) { Text("Create Account") }
     }
     if (showGuestUsernameDialog) {
         GuestUsernameDialog(
+            connected = connected,
             onDismiss = { showGuestUsernameDialog = false },
             loginViewModel = loginViewModel
         )
@@ -188,6 +193,7 @@ fun LoginScreen(
 
 @Composable
 fun GuestUsernameDialog(
+    connected: Boolean,
     onDismiss: () -> Unit,
     loginViewModel: LoginViewModel
 ) {
@@ -243,5 +249,7 @@ fun GuestUsernameDialog(
         }
     )
 }
+
+
 
 fun CharSequence?.isValidUsername() = !isNullOrEmpty() && this.length >= 3
