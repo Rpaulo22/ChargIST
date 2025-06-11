@@ -32,6 +32,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import org.imperiumlabs.geofirestore.GeoFirestore
+import org.imperiumlabs.geofirestore.extension.setLocation
 import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
@@ -167,6 +169,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             // return references to created documents, refs[0] ref do carregador, restantes refs dos slots
             refs
         }.addOnSuccessListener { refs ->
+            // Set location for a document
+            val geoFirestore = GeoFirestore(db.collection("charger"))
+            geoFirestore.setLocation(refs[0].id, GeoPoint(lat,lng)) { e ->
+                if (e != null) {
+                    Log.e("GeoFirestore", "Failed to set location", e)
+                } else {
+                    Log.d("GeoFirestore", "Location set successfully")
+                }
+            }
+
             val finalChargingSlots = mutableListOf<ChargingSlot>()
             var i = 1
             for (slot in slots) {
@@ -265,6 +277,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             // return references to created documents, refs[0] ref do carregador, restantes refs dos slots
             refs
         }.addOnSuccessListener { refs ->
+            // Set location for a document
+            val geoFirestore = GeoFirestore(db.collection("charger"))
+            geoFirestore.setLocation(refs[0].id, GeoPoint(lat,lng)) { e ->
+                if (e != null) {
+                    Log.e("GeoFirestore", "Failed to set location", e)
+                } else {
+                    Log.d("GeoFirestore", "Location set successfully")
+                }
+            }
+
             val finalChargingSlots = mutableListOf<ChargingSlot>()
             var i = 1
             for (slot in slots) {
@@ -392,6 +414,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                             slotRepository.delete(slotId)
                         }
                         // todo have it deleted in user local info
+                        slotRepository.delete(charger.chargingSlots)
                         chargerRepository.delete(charger)
                         Log.d("DeleteCharger", "Successfully deleted charger and slots")
                     }

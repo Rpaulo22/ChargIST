@@ -26,4 +26,8 @@ class ChargingSlotRepository(private val chargingSlotDao: ChargingSlotDao) {
     fun getSlots(ids: List<String>): Flow<List<ChargingSlot>> {
         return chargingSlotDao.getSlots(ids)
     }
+
+    suspend fun delete(ids: List<String>) {
+        chargingSlotDao.deleteChargingSlots(ids)
+    }
 }

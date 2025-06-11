@@ -11,6 +11,9 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,16 +28,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.imperiumlabs.geofirestore.GeoFirestore
 import org.json.JSONObject
 import pt.ist.cmu.chargist.BuildConfig
 import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargerDao
 import pt.ist.cmu.chargist.model.data.ChargingSlot
+import pt.ist.cmu.chargist.model.firebase.queryDocumentsAtLocation
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
 import java.util.Locale
-import kotlin.math.round
+import pt.ist.cmu.chargist.model.firebase.queryDocumentsAtLocation
 
 class SearchViewModel(application: Application) : AndroidViewModel(application) {
     val locationSearchResults = MutableStateFlow(listOf<Address>())
@@ -116,7 +121,13 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
             val n = if (allChargers.value.isEmpty()) 2 else 1
             allChargers.take(n).collect { chargers ->
                 // Atualizar carregadores em torno da localização
-                // TODO: try to update local DB from firebase, query local DB regardless
+                val db = Firebase.firestore
+                val chargerRef = db.collection("charger")
+                val geoFirestore = GeoFirestore(chargerRef)
+
+                Log.d("GeoFirebase", "'Bout'a do sum' geo queries")
+                val res = geoFirestore.queryDocumentsAtLocation(GeoPoint(location.latitude, location.longitude), maxDistance)
+                Log.d("GeoFirebase", "Geo query results = $res")
 
                 // BD local
 
@@ -171,7 +182,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                     // Travel Time
                     .filter { c ->
                         val t = getTravelTime(location, LatLng(c.latitude, c.longitude))
-                        minTravelTime <= t && t <= maxTravelTime
+                        t == null || (minTravelTime <= t && t <= maxTravelTime)
                     }
                     // Charging Speed
                     .filter { c ->
@@ -212,10 +223,14 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                         Pair(it, "$price €/kWh")
                     }
                     "Travel Time" -> sortedChargers.map {
-                        val time = getTravelTime(location, LatLng(it.latitude, it.longitude)).toInt()
-                        val hours = time / 60
-                        val minutes = time % 60
-                        Pair(it, "${hours}h${minutes}m")
+                        val time = getTravelTime(location, LatLng(it.latitude, it.longitude))?.toInt()
+                        var info = "unknown"
+                        if (time != null) {
+                            val hours = time / 60
+                            val minutes = time % 60
+                            info = "${hours}h${minutes}m"
+                        }
+                        Pair(it, info)
                     }
 
                     //"Availability" -> 0 // TODO: quando/se AVAILIBILITY?
@@ -274,12 +289,12 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
         return results[0]/1000 // result in km
     }
 
-    private fun getTravelTime(origin: LatLng, destination: LatLng): Float {
+    private fun getTravelTime(origin: LatLng, destination: LatLng): Float? {
         if (
             travelTimes.get(destination) == null || // not calculated
             calcDistance(travelTimes.get(destination)!!.first, origin) > 2  // old calculation (2km away from calculated point)
         ) {
-            return Float.MAX_VALUE
+            return null
         }
         return travelTimes.get(destination)!!.second
     }
