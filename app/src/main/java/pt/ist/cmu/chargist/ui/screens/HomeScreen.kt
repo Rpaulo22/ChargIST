@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.outlined.Bolt
@@ -59,6 +60,7 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -518,39 +520,90 @@ fun ChargerInformationPanel(
                 Spacer(Modifier.size(10.dp))
 
                 // Address of charger
-                Row (
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                Column (
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ){
                     Text(
                         text = chargerAddress,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier
-                            .weight(1f)
+                        textAlign = TextAlign.Center,
                     )
 
-                    IconButton(
-                        onClick = {
-                        val gmmIntentUri =
-                            "https://www.google.com/maps/dir/?api=1&destination=${charger.latitude},${charger.longitude}&travelmode=driving".toUri()
-                        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
-                        mapIntent.setPackage("com.google.android.apps.maps")
-                        if (mapIntent.resolveActivity(context.packageManager) != null) {
-                            context.startActivity(mapIntent)
-                        } else {
-                            Toast.makeText(
-                                context,
-                                "Google Maps app not found.",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                    Spacer(Modifier.size(6.dp))
+
+                    // Directions and Share Button
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Button(
+                            onClick = {
+                                val gmmIntentUri =
+                                    "https://www.google.com/maps/dir/?api=1&destination=${charger.latitude},${charger.longitude}&travelmode=driving".toUri()
+                                val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                                mapIntent.setPackage("com.google.android.apps.maps")
+                                if (mapIntent.resolveActivity(context.packageManager) != null) {
+                                    context.startActivity(mapIntent)
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Google Maps app not found.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            colors = ButtonColors(
+                                Color.Transparent,
+                                mainColor,
+                                Color.Transparent,
+                                Color.Gray
+                            )
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    Icons.Default.Directions,
+                                    contentDescription = "Directions Button",
+                                    modifier = Modifier.size(34.dp)
+                                )
+                                Text("Directions")
+                            }
                         }
-                    }) {
-                        Icon(
-                            Icons.Default.Directions,
-                            contentDescription = "Directions",
-                            modifier = Modifier.size(40.dp),
-                            tint = mainColor
-                        )
+
+                        Button(
+                            onClick = {
+                                val mapsUrl =
+                                    "https://www.google.com/maps/search/?api=1&query=${charger.latitude},${charger.longitude}"
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(
+                                        Intent.EXTRA_TEXT,
+                                        "Using ChargIST, I just found this charger!\nCheck out \"${charger.name}\" at:\n $mapsUrl"
+                                    )
+                                    type = "text/plain"
+                                }
+
+                                val shareIntent = Intent.createChooser(sendIntent, "Share via")
+                                context.startActivity(shareIntent)
+                            },
+                            colors = ButtonColors(
+                                Color.Transparent,
+                                mainColor,
+                                Color.Transparent,
+                                Color.Gray
+                            )
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    Icons.Default.Share,
+                                    contentDescription = "Share Button",
+                                    modifier = Modifier.size(34.dp)
+                                )
+                                Text("Share")
+                            }
+                        }
                     }
                 }
 
@@ -597,7 +650,6 @@ fun ChargerInformationPanel(
                 Text("Fast price: ${charger.priceFast} €/kWh")
 
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
-
                 // Ratings
                 Row (
                     verticalAlignment = Alignment.CenterVertically
