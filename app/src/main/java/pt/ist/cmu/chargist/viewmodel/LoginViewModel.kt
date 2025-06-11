@@ -105,7 +105,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 _loginSuccess.value = true
             } catch (e: Exception) {
-                _loginFailure.value = true
                 Log.e("LoginViewModel", "continueAsGuest(): caught an exception: $e")
             }
         }

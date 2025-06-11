@@ -89,7 +89,8 @@ fun ChargerForm(
     appViewModel: AppViewModel = viewModel(),
     mapViewModel: MapViewModel = viewModel(),
     onCreateClick: () -> Unit,
-    chargerId: String? = null  // if id is not given, a new charger is created, else a given charger is edited
+    chargerId: String? = null,  // if id is not given, a new charger is created, else a given charger is edited
+    holdLatLng: LatLng? = null // if this value is not null, a charger is being created by choosing a location directly on map
 ) {
     val context = LocalContext.current
     
@@ -128,6 +129,11 @@ fun ChargerForm(
             latitude = it.latitude
             longitude = it.longitude
         }
+    }
+
+    var holdLocationText by remember { mutableStateOf<String>("") }
+    LaunchedEffect(holdLatLng) {
+        if (holdLatLng != null) holdLocationText = mapViewModel.getAddress(context, holdLatLng)
     }
 
     var capturedImageUri by remember {
@@ -185,17 +191,24 @@ fun ChargerForm(
         Spacer(Modifier.size(10.dp))
         Text("This charger will be placed at:")
 
-        if (dataLoaded && latitude != null && longitude != null) {
-            LocationSearchBar(
-                onLocationUpdate = {
-                    Log.d("LocationUpdate", "$it")
-                    latitude = it?.latitude
-                    longitude = it?.longitude
-                },
-                mapViewModel = mapViewModel,
-                initInCurrentLocation = if (userLocation.value != null) !edit else false,
-                starterCoords = LatLng(latitude!!, longitude!!)
-            )
+        if (holdLatLng == null) {
+            if (dataLoaded && latitude != null && longitude != null) {
+                LocationSearchBar(
+                    onLocationUpdate = {
+                        Log.d("LocationUpdate", "$it")
+                        latitude = it?.latitude
+                        longitude = it?.longitude
+                    },
+                    mapViewModel = mapViewModel,
+                    initInCurrentLocation = if (userLocation.value != null) !edit else false,
+                    starterCoords = LatLng(latitude!!, longitude!!)
+                )
+            }
+        }
+        else {
+            Text(holdLocationText)
+            latitude = holdLatLng.latitude
+            longitude = holdLatLng.longitude
         }
         Spacer(Modifier.size(5.dp))
 

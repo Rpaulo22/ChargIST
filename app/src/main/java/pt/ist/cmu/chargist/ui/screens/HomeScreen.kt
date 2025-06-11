@@ -168,11 +168,13 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.runtime.DisposableEffect
+import pt.ist.cmu.chargist.connectionStatus
 
 @Composable
 fun HomeScreen(
     onAccountClick: () -> Unit,
     onCreateCharger: () -> Unit,
+    onCreateChargerByHoldingOnMap: (LatLng) -> Unit,
     onEditCharger: (String) -> Unit,
     onSearchClick: () -> Unit,
     appViewModel: AppViewModel = viewModel(),
@@ -231,38 +233,8 @@ fun HomeScreen(
                 )
         }
     ) { paddingValues ->
-        Map(paddingValues, chargers, slots, userLocation, onCreateCharger, onEditCharger, mapViewModel, appViewModel, centerPoint)
+        Map(paddingValues, chargers, slots, userLocation, onCreateCharger, onCreateChargerByHoldingOnMap, onEditCharger, mapViewModel, appViewModel, centerPoint)
     }
-}
-
-// function that verifies if client has connection to internet
-@Composable
-fun connectionStatus(): Boolean {
-    val context = LocalContext.current
-    val connected = remember { mutableStateOf(false) }
-
-    DisposableEffect(Unit) {
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                connected.value = true
-            }
-
-            override fun onLost(network: Network) {
-                connected.value = false
-            }
-        }
-
-        connectivityManager.registerDefaultNetworkCallback(callback)
-
-        onDispose {
-            connectivityManager.unregisterNetworkCallback(callback)
-        }
-    }
-
-    return connected.value
 }
 
 @Composable
@@ -272,6 +244,7 @@ fun Map(
     slots: List<ChargingSlot>,
     userLocation: LatLng?,
     onCreateCharger: () -> Unit,
+    onCreateChargerByHoldingOnMap: (LatLng) -> Unit,
     onEditCharger: (String) -> Unit,
     mapViewModel: MapViewModel,
     appViewModel: AppViewModel,
@@ -281,6 +254,9 @@ fun Map(
     val favoriteChargers by appViewModel.favoriteChargers.collectAsState()
 
     var showChargerInformationPanel by remember { mutableStateOf(false) }
+
+    var showMapLongClickDialog by remember { mutableStateOf(false) }
+    var mapLongClickLatLng by remember {mutableStateOf<LatLng?>(null)}
 
     var connected = connectionStatus()
 
@@ -315,7 +291,11 @@ fun Map(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             properties = mapProperties,
-            mapColorScheme = colorScheme
+            mapColorScheme = colorScheme,
+            onMapLongClick = { latLng ->
+                showMapLongClickDialog = true
+                mapLongClickLatLng = latLng
+            }
         ) {
 
             for (charger in chargers) {
@@ -354,7 +334,6 @@ fun Map(
                 modifier = Modifier.size(40.dp),
                 tint = mainColor
             )
-
         }
     }
     if (showChargerInformationPanel) {
@@ -365,6 +344,13 @@ fun Map(
             mapViewModel = mapViewModel,
             appViewModel = appViewModel,
             favoriteChargers = favoriteChargers,
+        )
+    }
+    if (showMapLongClickDialog) {
+        MapLongClickDialog(
+            clickedLatLng = mapLongClickLatLng!!,
+            onCreateChargerByHoldingOnMap = onCreateChargerByHoldingOnMap,
+            onDismiss = { showMapLongClickDialog = false },
         )
     }
 }
@@ -1181,4 +1167,34 @@ fun RelevantNearbyServices(
     else {
         Text("Connect to the internet to view services near this charger!", textAlign = TextAlign.Center)
     }
+}
+
+@Composable
+fun MapLongClickDialog(
+    clickedLatLng: LatLng,
+    onCreateChargerByHoldingOnMap: (LatLng) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Create charger here?: $clickedLatLng")
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onCreateChargerByHoldingOnMap(clickedLatLng)
+                }) {
+                Text("Yes")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                }) {
+                Text("No")
+            }
+        }
+    )
 }
