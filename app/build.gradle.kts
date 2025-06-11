@@ -94,6 +94,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-storage")
 
     // Room
     val room_version = "2.7.1"
@@ -118,6 +119,8 @@ dependencies {
     implementation("com.google.maps.android:maps-compose:6.6.0")
     implementation("com.google.android.gms:play-services-maps:19.2.0")
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("com.google.android.libraries.places:places:4.3.1")
+
 
     // Google Maps SDK for Android
     implementation(libs.places)
@@ -131,6 +134,7 @@ dependencies {
 
     // GeoFirestore
     implementation("com.github.imperiumlabs:GeoFirestore-Android:v1.5.0")
+
 }
 
 secrets {

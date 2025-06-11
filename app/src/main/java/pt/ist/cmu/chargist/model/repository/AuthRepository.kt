@@ -46,10 +46,24 @@ class AuthRepository (
         val user = FirebaseAuth.getInstance().currentUser
         val uid = user!!.uid
         val db = Firebase.firestore
+        // Delete user document
         db.collection("User")
             .document(uid)
             .delete()
             .await()
+        // Query all chargers owned by user
+        val chargersQuerySnapshot = db.collection("Charger")
+            .whereEqualTo("ownerId", uid)
+            .get()
+            .await()
+        // Delete each charger document one by one
+        chargersQuerySnapshot.documents.forEach { doc ->
+            db.collection("Charger")
+                .document(doc.id)
+                .delete()
+                .await()
+        }
+
         authData.deleteAccount()
     }
 }

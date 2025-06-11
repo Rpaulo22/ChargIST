@@ -176,6 +176,7 @@ private fun SearchScreenContent (
                         .padding(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
+                    Spacer(modifier = Modifier.weight(1f))
                     Button(
                         onClick = onSort,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.background),
@@ -213,6 +214,7 @@ private fun SearchScreenContent (
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Filter", color = mainColor, fontSize = 16.sp)
                     }
+                    Spacer(modifier = Modifier.weight(1f))
                 }
 
                 Box (Modifier.fillMaxSize()) {

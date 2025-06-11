@@ -6,9 +6,11 @@ import android.R.attr.rating
 import android.R.attr.text
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Paint
 import android.location.Location
+import android.net.Uri
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
@@ -18,6 +20,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,8 +49,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.outlined.Bolt
@@ -55,6 +60,7 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -144,6 +150,7 @@ import pt.ist.cmu.chargist.R
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import java.security.AccessController.getContext
+import androidx.core.net.toUri
 
 @Composable
 fun HomeScreen(
@@ -454,17 +461,26 @@ fun ChargerInformationPanel(
     var slotDialog by remember {mutableStateOf(false)}
     var selectedSlot by remember { mutableIntStateOf(0) }
 
+    var titleScrollState = rememberScrollState()
+
     AlertDialog(
+        modifier = Modifier
+            .padding(vertical = 24.dp),
         onDismissRequest = onDismiss,
         title = {
             Row (
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(end = 4.dp),
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(charger.name)
+                Text(
+                    text = charger.name,
+                    modifier = Modifier
+                        .horizontalScroll(titleScrollState)
+                        .weight(1f),
+                    maxLines = 1
+                )
                 IconButton(
                     onClick = {
                         favourite = !favourite
@@ -501,8 +517,96 @@ fun ChargerInformationPanel(
             ) {
                 ChargerImage(charger, favourite)
 
+                Spacer(Modifier.size(10.dp))
+
                 // Address of charger
-                Text(chargerAddress, textAlign = TextAlign.Center)
+                Column (
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ){
+                    Text(
+                        text = chargerAddress,
+                        textAlign = TextAlign.Center,
+                    )
+
+                    Spacer(Modifier.size(6.dp))
+
+                    // Directions and Share Button
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Button(
+                            onClick = {
+                                val gmmIntentUri =
+                                    "https://www.google.com/maps/dir/?api=1&destination=${charger.latitude},${charger.longitude}&travelmode=driving".toUri()
+                                val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                                mapIntent.setPackage("com.google.android.apps.maps")
+                                if (mapIntent.resolveActivity(context.packageManager) != null) {
+                                    context.startActivity(mapIntent)
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Google Maps app not found.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            colors = ButtonColors(
+                                Color.Transparent,
+                                mainColor,
+                                Color.Transparent,
+                                Color.Gray
+                            )
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    Icons.Default.Directions,
+                                    contentDescription = "Directions Button",
+                                    modifier = Modifier.size(34.dp)
+                                )
+                                Text("Directions")
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                val mapsUrl =
+                                    "https://www.google.com/maps/search/?api=1&query=${charger.latitude},${charger.longitude}"
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(
+                                        Intent.EXTRA_TEXT,
+                                        "Using ChargIST, I just found this charger!\nCheck out \"${charger.name}\" at:\n $mapsUrl"
+                                    )
+                                    type = "text/plain"
+                                }
+
+                                val shareIntent = Intent.createChooser(sendIntent, "Share via")
+                                context.startActivity(shareIntent)
+                            },
+                            colors = ButtonColors(
+                                Color.Transparent,
+                                mainColor,
+                                Color.Transparent,
+                                Color.Gray
+                            )
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    Icons.Default.Share,
+                                    contentDescription = "Share Button",
+                                    modifier = Modifier.size(34.dp)
+                                )
+                                Text("Share")
+                            }
+                        }
+                    }
+                }
+
 
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
@@ -546,7 +650,6 @@ fun ChargerInformationPanel(
                 Text("Fast price: ${charger.priceFast} €/kWh")
 
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
-
                 // Ratings
                 Row (
                     verticalAlignment = Alignment.CenterVertically
@@ -571,22 +674,17 @@ fun ChargerInformationPanel(
                 Spacer(Modifier.size(6.dp))
                 RatingHistogram(charger.ratings)
 
+                HorizontalDivider(Modifier.padding(14.dp), thickness = 1.dp)
 
-                // todo sitios perto
+                RelevantNearbyServices(
+                    context,
+                    mapViewModel,
+                    charger.latitude,
+                    charger.longitude
+                )
             }
         },
         confirmButton = {
-            if (uid == charger.ownerId) {
-                TextButton(
-                    onClick = {
-                        onEditCharger(charger.id)
-                        onDismiss()
-                    }) {
-                    Text("Edit")
-                }
-            }
-        },
-        dismissButton = {
             TextButton(
                 onClick = {
                     if (favouriteChanged) {
@@ -601,6 +699,17 @@ fun ChargerInformationPanel(
                     onDismiss()
                 }) {
                 Text("Back")
+            }
+        },
+        dismissButton = {
+            if (uid == charger.ownerId) {
+                TextButton(
+                    onClick = {
+                        onEditCharger(charger.id)
+                        onDismiss()
+                    }) {
+                    Text("Edit")
+                }
             }
         }
     )
@@ -883,5 +992,48 @@ fun RatingHistogram(ratings: Map<String, Double>) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun RelevantNearbyServices(
+    context: Context,
+    mapViewModel: MapViewModel,
+    lat: Double,
+    lng: Double
+) {
+    val location = LatLng(lat, lng)
+    val result = remember { mutableStateListOf<List<String>>() }
+
+    LaunchedEffect(Unit) {
+        result.addAll(mapViewModel.getNearbyServices(context,location)?: listOf())
+        result.sortBy { it.getOrNull(3)?.toDoubleOrNull() ?: Double.MAX_VALUE } // sorts services by how close they are
+    }
+
+    Text("Nearby Services", fontSize = 32.sp)
+    Spacer(Modifier.size(20.dp))
+
+    for (info in result) {
+        Text(info[0], // name of service
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth(),
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp)
+        Spacer(Modifier.size(12.dp))
+        
+        Text("Type: ${info[1]}", // type of service
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.size(8.dp))
+        
+        Text("Location:\n${info[2]}", // address of service
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.size(8.dp))
+        
+        Text("Distance from charger: ${info[3].toString().substring(0,4)} km", // distance from charger to service
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth())
+        HorizontalDivider(Modifier.padding(10.dp), thickness = 1.dp)
     }
 }

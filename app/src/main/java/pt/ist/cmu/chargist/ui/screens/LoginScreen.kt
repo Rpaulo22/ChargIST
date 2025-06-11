@@ -160,6 +160,7 @@ fun LoginScreen(
             shape = RoundedCornerShape(6.dp),
             border = BorderStroke(2.dp, mainColor)
         ) { Text("Log In") }
+        Spacer(modifier = Modifier.size(5.dp))
         OutlinedButton(
             onClick = {
                 if (loginViewModel.user == null) {

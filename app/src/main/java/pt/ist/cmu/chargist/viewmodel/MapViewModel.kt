@@ -16,8 +16,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -26,6 +24,7 @@ import com.google.android.gms.location.Priority
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -130,5 +129,77 @@ class MapViewModel: ViewModel() {
         fusedLocationClient.requestLocationUpdates(
             locationRequest, locationCallback, Looper.getMainLooper(),
         )
+    }
+
+    suspend fun getNearbyServices(context: Context, location: LatLng): List<List<String>>? {
+        return withContext(Dispatchers.IO) {
+            val results = mutableListOf<List<String>>()
+            val ignoredTypes = listOf("Locality", "General Contractor", "Insurance Agency",
+                "Jewelry Store", "Finance", "Real Estate Agency", "Accounting",
+                "Furniture Store", "School", "Neighborhood", "Secondary School", "Parking",
+                "Sublocality Level 1")
+
+            val client = OkHttpClient()
+
+            val apiKey = BuildConfig.MAPS_API_KEY
+
+            val url = HttpUrl.Builder()
+                .scheme("https")
+                .host("maps.googleapis.com")
+                .addPathSegments("maps/api/place/nearbysearch/json")
+                .addQueryParameter("location", "${location.latitude},${location.longitude}")
+                .addQueryParameter("radius", "800") // searches in a radius of 800 meters
+                .addQueryParameter("key", apiKey)
+                .build()
+
+            val request = Request.Builder()
+                .url(url)
+                .build()
+
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val json = response.body?.string()
+                val jsonObject = JSONObject(json)
+                val placesArray = jsonObject.getJSONArray("results")
+
+                var typeMap = mutableMapOf<String, Int>()
+
+                for (i in 0 until placesArray.length()) {
+                    val placeObj = placesArray.getJSONObject(i)
+
+                    val name = placeObj.getString("name")
+                    val vicinity = placeObj.optString("vicinity", "Unknown")
+
+                    val type = placeObj.getJSONArray("types")[0]
+                        .toString()
+                        .replace("_"," ")
+                        .split(" ")
+                        .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } } // format strings to look presentable
+
+                    Log.d("Services", "Type $type")
+
+                    if (typeMap.getOrDefault(type, 0) >= 2 || type in ignoredTypes) continue // limit services to 2 per type and ignore some types
+
+                    typeMap[type] = typeMap.getOrDefault(type, 0) + 1
+
+                    Log.d("Services", "Adding type $type")
+
+                    val locationObj = placeObj.getJSONObject("geometry").getJSONObject("location")
+                    val lat = locationObj.getDouble("lat")
+                    val lng = locationObj.getDouble("lng")
+
+                    val distance = FloatArray(1)
+                    Location.distanceBetween(
+                        location.latitude, location.longitude,
+                        lat, lng, distance
+                    )
+
+                    results.add(listOf(name,type,vicinity,(distance[0]/1000).toString()))
+                }
+            } else {
+                null
+            }
+            results
+        }
     }
 }
