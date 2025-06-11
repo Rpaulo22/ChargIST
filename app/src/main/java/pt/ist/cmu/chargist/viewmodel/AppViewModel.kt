@@ -465,6 +465,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                         }
                         slotRepository.delete(charger.chargingSlots)
                         chargerRepository.delete(charger)
+                        // delete photo from Firebase Storage
+                        val storage = Firebase.storage
+                        val storageRef = storage.reference
+                        val chargerPhotoImagesRef = storageRef.child("images/$chargerId/photo_$chargerId.jpg")
+                        chargerPhotoImagesRef.delete()
+
                         Log.d("DeleteCharger", "Successfully deleted charger and slots")
                     }
                 }.addOnFailureListener {
@@ -741,12 +747,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
     suspend fun downloadChargerPhoto(chargerId: String) : ByteArray? {
         val storage = Firebase.storage
         val storageRef = storage.reference
-        val pathReference = storageRef.child("images/$chargerId/photo_$chargerId.jpg")
+        val chargerPhotoImagesRef = storageRef.child("images/$chargerId/photo_$chargerId.jpg")
 
         val maxDownloadSizeBytes = 5 * 1024 * 1024L
 
         try {
-            val photoBytes = pathReference.getBytes(maxDownloadSizeBytes).await()
+            val photoBytes = chargerPhotoImagesRef.getBytes(maxDownloadSizeBytes).await()
             return photoBytes
         } catch (e: StorageException) {
             // charger has no photo
