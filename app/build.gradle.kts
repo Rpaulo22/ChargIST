@@ -134,7 +134,6 @@ dependencies {
 
     // GeoFirestore
     implementation("com.github.imperiumlabs:GeoFirestore-Android:v1.5.0")
-
 }
 
 secrets {

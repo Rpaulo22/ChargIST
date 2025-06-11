@@ -6,6 +6,7 @@ import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.currentRecomposeScope
@@ -28,6 +29,8 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.firestore
+import com.google.firebase.storage.StorageException
+import com.google.firebase.storage.storage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -50,6 +53,7 @@ import pt.ist.cmu.chargist.model.data.User
 import pt.ist.cmu.chargist.model.repository.AuthRepository
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
 import pt.ist.cmu.chargist.model.repository.UserRepository
+import java.io.File
 import java.time.Instant
 import java.util.UUID
 import kotlin.math.round
@@ -142,6 +146,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     fun createCharger(name:String, ownerId:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
                       lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double) {
+    val isCreatingCharger = MutableStateFlow(false)
+
+    fun createCharger(context:Context, name:String, ownerId:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
+                      lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow:Double, capturedImageUri:Uri) {
+
+        if (isCreatingCharger.value) {
+            return
+        }
+        else {
+            isCreatingCharger.value = true
+        }
 
         if (priceFast < 0 || priceMedium < 0 || priceSlow < 0) {
             throw Exception("Invalid price (must be 0 €/kWh minimum).")
@@ -238,14 +253,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     slotRepository.insert(slot)
                 }
                 chargerRepository.insert(c)
+                uploadChargerPhoto(context, refs[0].id, capturedImageUri)
             }
         }.addOnFailureListener {
             throw Exception("Error creating charger. Please try again")
         }
     }
 
-    fun updateCharger(chargerId: String, name:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
-                      lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double, deletedSlots: List<ChargingSlot>) {
+    fun updateCharger(context:Context, chargerId: String, name:String, slots:List<ChargingSlot>, creditCard: Boolean, mbWay:Boolean, cash:Boolean,
+                      lat:Double, lng:Double, priceFast:Double, priceMedium:Double, priceSlow: Double, deletedSlots: List<ChargingSlot>, capturedImageUri: Uri) {
 
         if (priceFast < 0 || priceMedium < 0 || priceSlow < 0) {
             throw Exception("Invalid price (must be more or equal than 0 €/kWh).")
@@ -341,6 +357,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     slotRepository.delete(slot)
                 }
                 chargerRepository.update(chargerId, name, slotIds, creditCard, mbWay, cash, lat, lng, priceFast, priceMedium, priceSlow)
+                uploadChargerPhoto(context, chargerId, capturedImageUri)
             }
         }.addOnFailureListener {
             throw Exception("Error creating charger. Please try again")
@@ -463,6 +480,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                         }
                         slotRepository.delete(charger.chargingSlots)
                         chargerRepository.delete(charger)
+                        // delete photo from Firebase Storage
+                        val storage = Firebase.storage
+                        val storageRef = storage.reference
+                        val chargerPhotoImagesRef = storageRef.child("images/$chargerId/photo_$chargerId.jpg")
+                        chargerPhotoImagesRef.delete()
+
                         Log.d("DeleteCharger", "Successfully deleted charger and slots")
                     }
                 }.addOnFailureListener {
@@ -714,6 +737,42 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 Log.e("Firebase", "User {$uid} had an error freeing charger ${slot.id}")
                 throw Exception("Couldn't free charger. Please try again.")
             }
+    }
+
+    suspend fun uploadChargerPhoto(context: Context, chargerId: String, imageUri: Uri) {
+        val storage = Firebase.storage
+        val storageRef = storage.reference
+        val chargerPhotoImagesRef = storageRef.child("images/$chargerId/photo_$chargerId.jpg")
+
+        // read bytes from Uri
+        val photoBytes = context.contentResolver.openInputStream(imageUri)?.use { inputStream ->
+            inputStream.readBytes()
+        } ?: throw IllegalArgumentException("Unable to open input stream from URI")
+
+        try {
+            // Upload bytes to Firebase Storage, suspending until done
+            chargerPhotoImagesRef.putBytes(photoBytes).await()
+            Log.d("uploadChargerPhoto", "Upload successful for chargerId=$chargerId")
+        } catch (e: Exception) {
+            Log.e("uploadChargerPhoto", "Upload failed for chargerId=$chargerId", e)
+            throw e  // rethrow or handle as needed
+        }
+    }
+
+    suspend fun downloadChargerPhoto(chargerId: String) : ByteArray? {
+        val storage = Firebase.storage
+        val storageRef = storage.reference
+        val chargerPhotoImagesRef = storageRef.child("images/$chargerId/photo_$chargerId.jpg")
+
+        val maxDownloadSizeBytes = 5 * 1024 * 1024L
+
+        try {
+            val photoBytes = chargerPhotoImagesRef.getBytes(maxDownloadSizeBytes).await()
+            return photoBytes
+        } catch (e: StorageException) {
+            // charger has no photo
+            return null
+        }
     }
 }
 
