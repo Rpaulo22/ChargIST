@@ -172,7 +172,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
-import pt.ist.cmu.chargist.connectionStatus
+import pt.ist.cmu.chargist.viewmodel.connectionStatus
+import pt.ist.cmu.chargist.viewmodel.isUsingMobileData
 
 @Composable
 fun HomeScreen(
@@ -777,22 +778,28 @@ fun ChargerImage(
     charger:Charger,
     favourite: Boolean
 ) {
+    val context = LocalContext.current
+
     var isLoading by remember { mutableStateOf(true) }
 
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
+    val connectedToMobileData = isUsingMobileData(context)
+
     LaunchedEffect(Unit) {
-        val photoBytes = appViewModel.downloadChargerPhoto(charger.id)
-        isLoading = false
-        if (photoBytes != null) {
-            bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.size)
+        if (!connectedToMobileData) {
+            val photoBytes = appViewModel.downloadChargerPhoto(charger.id)
+            if (photoBytes != null) {
+                bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.size)
+            }
         }
+        isLoading = false
     }
 
     // Charger Picture
     if (isLoading) {
         Text(
-            text="Loading Image...",
+            text="Loading...",
             textAlign = TextAlign.Center,
             color = mainColor,
             fontSize = 24.sp,

@@ -3,8 +3,17 @@ package pt.ist.cmu.chargist.viewmodel
 import android.R.attr.name
 import android.content.Context
 import android.location.Location
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.util.Log
+import android.util.Patterns
 import androidx.compose.animation.core.snap
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewModelScope
 import coil.util.CoilUtils.result
 import com.google.android.gms.maps.model.LatLng
@@ -106,6 +115,59 @@ suspend fun reloadChargersOnLocation(center: GeoPoint, radius: Double, chargerDa
     }
 }
 
+// function that verifies if client has connection to internet
+@Composable
+fun connectionStatus(): Boolean {
+    val context = LocalContext.current
+    val connected = remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                connected.value = true
+            }
+
+            override fun onLost(network: Network) {
+                connected.value = false
+            }
+        }
+
+        connectivityManager.registerDefaultNetworkCallback(callback)
+
+        onDispose {
+            connectivityManager.unregisterNetworkCallback(callback)
+        }
+    }
+
+    return connected.value
+}
+
+// function that checks if client is using mobile data
+fun isUsingMobileData(context: Context): Boolean {
+    val connectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return false
+
+    val activeNetwork = connectivityManager.activeNetwork
+    if (activeNetwork == null) {
+        Log.d("NetworkCheck", "No active network")
+        return false
+    }
+
+    val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+    if (networkCapabilities == null) {
+        Log.d("NetworkCheck", "No network capabilities")
+        return false
+    }
+
+    val isMobile = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+    Log.d("NetworkCheck", "Is mobile data: $isMobile")
+    return isMobile
+}
+
 fun calcDistance(loc1: LatLng, loc2: LatLng): Float {
     val results = FloatArray(1)
     Location.distanceBetween(
@@ -115,3 +177,9 @@ fun calcDistance(loc1: LatLng, loc2: LatLng): Float {
 
     return results[0]/1000 // result in km
 }
+
+fun CharSequence?.isValidEmail() = !isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(this).matches()
+
+fun CharSequence?.isValidUsername() = !isNullOrEmpty() && this.length >= 3
+
+fun CharSequence?.isValidPassword() = !isNullOrEmpty() && this.length >= 6

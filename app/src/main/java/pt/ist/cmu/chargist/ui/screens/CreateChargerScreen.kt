@@ -94,7 +94,7 @@ fun ChargerForm(
     holdLatLng: LatLng? = null // if this value is not null, a charger is being created by choosing a location directly on map
 ) {
     val context = LocalContext.current
-    val chargers by appViewModel.allChargers.collectAsState()
+    appViewModel.allChargers.collectAsState()
     
     val edit = (chargerId != null)
     var dataLoaded by remember {mutableStateOf(false)} // indicates if charger info has been loaded

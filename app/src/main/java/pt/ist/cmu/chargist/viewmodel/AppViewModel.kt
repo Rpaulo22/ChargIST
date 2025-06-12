@@ -656,6 +656,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         currentUser.value = user.copy(favoriteChargers = newFavorites)
     }
 
+    val deleteSuccess = MutableStateFlow(false)
+
     fun deleteAccount() {
         try {
             viewModelScope.launch {
@@ -674,6 +676,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                 // delete the user
                 authRepository.deleteAccount()
                 userRepository.delete(currentUser.value!!)
+                deleteSuccess.value = true
            }
             Log.d("AppViewModel", "Successfully deleted user account")
         } catch (e: Exception) {
@@ -781,16 +784,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             }
         }
         return true
-    }
-
-    fun calcDistance(loc1: LatLng, loc2: LatLng): Float {
-        val results = FloatArray(1)
-        Location.distanceBetween(
-            loc1.latitude, loc1.longitude,
-            loc2.latitude, loc2.longitude, results
-        )
-
-        return results[0]/1000 // result in km
     }
 }
 
