@@ -93,30 +93,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         // get current user
         viewModelScope.launch {
             val localUser = userRepository.getUserById(uid)
-            if (localUser != null) {
-                currentUser.value = localUser
-                Log.e("test", localUser.toString())
-            }
-            else {
-                val db = Firebase.firestore
-                val doc = db
-                    .collection("User")
-                    .document(uid)
-                    .get()
-                    .await()
-                val data = doc.data
-                if (doc.exists() && data != null) {
-                    val remoteUser = User(
-                        id = doc.id,
-                        email = data["email"] as String,
-                        name = data["username"] as String,
-                        phoneNumber = data["phoneNumber"] as String,
-                        favoriteChargers = data["favoriteChargers"] as MutableList<String>
-                    )
-                    userRepository.insert(remoteUser)
-                    currentUser.value = remoteUser
+            currentUser.value = localUser
+            val db = Firebase.firestore
+            val doc = db
+                .collection("User")
+                .document(uid)
+                .get()
+                .addOnSuccessListener { doc ->
+                    val data = doc.data
+                    if (doc.exists() && data != null) {
+                        val remoteUser = User(
+                            id = doc.id,
+                            email = data["email"] as String,
+                            name = data["username"] as String,
+                            phoneNumber = data["phoneNumber"] as String,
+                            favoriteChargers = data["favoriteChargers"] as MutableList<String>
+                        )
+                        viewModelScope.launch {
+                            userRepository.insert(remoteUser)
+                            currentUser.value = remoteUser
+                        }
+                    }
                 }
-            }
         }
     }
 
