@@ -772,7 +772,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
     }
 
     suspend fun checkIfNoCloseChargers(chargerId: String?, lat: Double, lng: Double) : Boolean {
-        val minimumDistanceBetweenChargers = 0.250 // in km
+        val minimumDistanceBetweenChargers = 0.050 // in km
         val chargerList = allChargers.first()
         for (charger in chargerList) {
             if (chargerId != null && chargerId == charger.id) continue // skip if editing charger and its same charger

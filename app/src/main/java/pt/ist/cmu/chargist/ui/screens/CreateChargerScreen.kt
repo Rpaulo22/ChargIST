@@ -411,7 +411,7 @@ fun ChargerForm(
                             try {
                                 Log.d("LocationUpdate", "lat:$latitude | long:$longitude")
                                 if (!appViewModel.checkIfNoCloseChargers(chargerId, latitude!!, longitude!!)) {
-                                    Toast.makeText(context, "Too close to another charger (minimum 250 meters)", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Too close to another charger (minimum 50 meters)", Toast.LENGTH_SHORT).show()
                                 }
                                 else if (!edit) {
                                     appViewModel.createCharger(
