@@ -23,6 +23,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -1176,20 +1177,32 @@ fun RelevantNearbyServices(
     val location = LatLng(lat, lng)
     val result = remember { mutableStateListOf<List<String>>() }
     val connected = connectionStatus()
-    var hasPolled = false
+    var hasPolled by remember { mutableStateOf(false) }
 
-    LaunchedEffect(connected) {
-        if (!hasPolled) {
-            result.addAll(mapViewModel.getNearbyServices(context, location) ?: listOf())
-            result.sortBy {it.getOrNull(3)?.toDoubleOrNull() ?: Double.MAX_VALUE} // sorts services by how close they are
-            hasPolled = true
+    var getNearbyServices by remember { mutableStateOf(false) }
+
+    LaunchedEffect(connected) { // waits for connection to be established as true
+        if (hasPolled) return@LaunchedEffect // makes sure that only polls once (more than that is unnecessary)
+        while (!getNearbyServices) { // waits for button to be clicked
+            delay(200)
         }
+        result.addAll(mapViewModel.getNearbyServices(context, location) ?: listOf())
+        result.sortBy {it.getOrNull(3)?.toDoubleOrNull() ?: Double.MAX_VALUE} // sorts services by how close they are
+        hasPolled = true
     }
 
-    if (connected) {
-        Text("Nearby Services", fontSize = 32.sp)
-        Spacer(Modifier.size(20.dp))
+    Log.d("Services","hasPolled: $hasPolled")
 
+    Text("Nearby Services", fontSize = 32.sp)
+    Spacer(Modifier.size(10.dp))
+    if (!getNearbyServices && connected) {
+        TextButton(
+            onClick = {getNearbyServices = true},
+            colors = ButtonColors(Color.Transparent, mainColor, Color.Gray, colorScheme.primary)
+        ) {
+            Text("Get Nearby Services")}
+    }
+    if (hasPolled) {
         for (info in result) {
             Text(
                 info[0], // name of service
@@ -1222,7 +1235,7 @@ fun RelevantNearbyServices(
             HorizontalDivider(Modifier.padding(10.dp), thickness = 1.dp)
         }
     }
-    else {
+    else if (!connected) {
         Text("Connect to the internet to view services near this charger!", textAlign = TextAlign.Center)
     }
 }
