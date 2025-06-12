@@ -29,10 +29,6 @@ class ChargerRepository(private val chargerDao: ChargerDao) {
         chargerDao.deleteCharger(charger)
     }
 
-    suspend fun deleteRelevantChargers() {
-        chargerDao.deleteRelevantChargers()
-    }
-
     fun getChargerFlowById(id: String): Flow<Charger> {
         return chargerDao.getChargerFlow(id)
     }

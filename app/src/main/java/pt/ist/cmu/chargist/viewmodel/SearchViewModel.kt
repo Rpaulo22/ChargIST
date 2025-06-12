@@ -293,7 +293,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
         return result
     }
 
-    private fun priceForSpeed(c: Charger, s: Int): Double { // TODO: isto devia estar no âmbito da class Charger, mas paciência, provavelmente não vai lá parar
+    private fun priceForSpeed(c: Charger, s: Int): Double {
         when (s) {
             0 -> return c.priceSlow
             1 -> return c.priceMedium

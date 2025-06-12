@@ -396,7 +396,7 @@ fun SimpleMapMarker(
 
     val favourite = (favoriteChargers?.contains(charger.id) == true)
 
-    val imgUrl: String? = null // todo actually sacate the image from firebase
+    val imgUrl: String? = null
 
     val painter = rememberAsyncImagePainter(
         ImageRequest.Builder(LocalContext.current)
