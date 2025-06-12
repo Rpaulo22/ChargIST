@@ -648,7 +648,7 @@ fun Camera(
                     }
                     changeCapturedImageUri(Uri.EMPTY)
                 }) {
-                    Text("Take another Image (NOTE: nothing is done with the image right now)")
+                    Text("Retake Photo", textAlign = TextAlign.Center)
                 }
             }
         }
