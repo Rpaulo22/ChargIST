@@ -89,7 +89,9 @@ fun LocationSearchBar (
     }
 
     LaunchedEffect(Unit) {
-        Toast.makeText(context, "Using current location", Toast.LENGTH_SHORT).show()
+        if (usingMyLocation) {
+            Toast.makeText(context, "Using current location", Toast.LENGTH_SHORT).show()
+        }
     }
 
     val onSearch = { address: Address? ->
