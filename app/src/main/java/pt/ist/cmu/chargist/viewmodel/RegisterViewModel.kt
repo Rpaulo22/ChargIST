@@ -1,11 +1,8 @@
 package pt.ist.cmu.chargist.viewmodel
 
-import android.R.attr.phoneNumber
 import android.app.Application
 import android.util.Log
-import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth

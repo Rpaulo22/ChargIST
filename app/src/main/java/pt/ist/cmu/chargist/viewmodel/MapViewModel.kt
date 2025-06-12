@@ -115,7 +115,7 @@ class MapViewModel: ViewModel() {
     }
 
     @SuppressLint("MissingPermission")
-    fun startLocationUpdates(context: Context, fusedLocationClient: FusedLocationProviderClient) {
+    fun startLocationUpdates(fusedLocationClient: FusedLocationProviderClient) {
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000).build()
 
         val locationCallback: LocationCallback = object : LocationCallback() {
@@ -131,7 +131,7 @@ class MapViewModel: ViewModel() {
         )
     }
 
-    suspend fun getNearbyServices(context: Context, location: LatLng): List<List<String>>? {
+    suspend fun getNearbyServices(location: LatLng): List<List<String>>? {
         return withContext(Dispatchers.IO) {
             val results = mutableListOf<List<String>>()
             val ignoredTypes = listOf("Locality", "General Contractor", "Insurance Agency",

@@ -1,6 +1,5 @@
 package pt.ist.cmu.chargist.viewmodel
 
-import android.R.attr.name
 import android.content.Context
 import android.location.Location
 import android.net.ConnectivityManager
@@ -8,23 +7,18 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.util.Log
 import android.util.Patterns
-import androidx.compose.animation.core.snap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewModelScope
-import coil.util.CoilUtils.result
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.firestore
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import org.imperiumlabs.geofirestore.GeoFirestore
-import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargerDao
 import pt.ist.cmu.chargist.model.data.ChargingSlot

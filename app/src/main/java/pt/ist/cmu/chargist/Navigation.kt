@@ -10,7 +10,6 @@ sealed class Screen(val route: String) {
         fun createRoute(centerPoint: LatLng) = "home/${centerPoint.latitude}/${centerPoint.longitude}"
     }
     object Account : Screen("account")
-    object Settings : Screen("settings")
     object CreateCharger: Screen("createCharger")
     object CreateChargerByHoldingOnMap: Screen("createChargerByHoldingOnMap/{lat}/{lng}") {
         fun createRoute(latLng: LatLng) = "createChargerByHoldingOnMap/${latLng.latitude}/${latLng.longitude}"

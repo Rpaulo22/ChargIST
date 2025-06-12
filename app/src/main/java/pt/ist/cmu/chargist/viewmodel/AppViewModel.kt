@@ -2,19 +2,14 @@ package pt.ist.cmu.chargist.viewmodel
 
 import android.app.Application
 import android.content.Context
-import android.location.Location
 import android.net.Uri
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.firestore
@@ -35,11 +30,11 @@ import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Auth
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargerDao
-import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.model.data.ChargingSlotDao
 import pt.ist.cmu.chargist.model.data.User
 import pt.ist.cmu.chargist.model.repository.AuthRepository
+import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
 import pt.ist.cmu.chargist.model.repository.UserRepository
 import java.time.Instant
@@ -63,8 +58,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     val user = FirebaseAuth.getInstance().currentUser
     val uid = user!!.uid
-
-    var lastSlot by mutableStateOf<ChargingSlot?>(null)
 
     val chargerDao: ChargerDao
     val chargingSlotDao: ChargingSlotDao
@@ -95,8 +88,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             val localUser = userRepository.getUserById(uid)
             currentUser.value = localUser
             val db = Firebase.firestore
-            val doc = db
-                .collection("User")
+            db.collection("User")
                 .document(uid)
                 .get()
                 .addOnSuccessListener { doc ->
@@ -786,7 +778,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         try {
             val photoBytes = chargerPhotoImagesRef.getBytes(maxDownloadSizeBytes).await()
             return photoBytes
-        } catch (e: StorageException) {
+        } catch (_: StorageException) {
             // charger has no photo
             return null
         }

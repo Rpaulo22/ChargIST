@@ -1,24 +1,14 @@
 package pt.ist.cmu.chargist.model.repository
 
-import android.util.Log
-import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.firestore
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import pt.ist.cmu.chargist.model.data.Auth
-import javax.inject.Inject
 
 class AuthRepository (
     private val authData: Auth
 ) {
-    val currentUser: FirebaseUser? = authData.currentUser
-    val currentUserIdFlow: Flow<String?> = authData.currentUserIdFlow
-
     suspend fun createGuestAccount() {
         authData.createGuestAccount()
     }

@@ -3,7 +3,6 @@ package pt.ist.cmu.chargist.model.repository
 import kotlinx.coroutines.flow.Flow
 import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargerDao
-import pt.ist.cmu.chargist.model.data.ChargingSlot
 
 class ChargerRepository(private val chargerDao: ChargerDao) {
     val allChargers: Flow<List<Charger>> = chargerDao.getAllChargers()
