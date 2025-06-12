@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.toSize
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.firestore.GeoPoint
 import android.location.Address
+import android.provider.SyncStateContract.Helpers.update
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -82,6 +83,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.play.integrity.internal.l
@@ -142,6 +144,7 @@ private fun SearchScreenContent (
     var filterPriceMax: Double = 100.0
     var filterTravelTimeMin: Double = 0.0
     var filterTravelTimeMax: Double = 500.0
+    var filterAvailableOnly = false
 
     val onSearchChargers = {
         chargerDistancePair: List<Pair<Charger, String>> ->
@@ -261,7 +264,8 @@ private fun SearchScreenContent (
                                     filterTravelTimeMax,
                                     requireMbWay,
                                     requireCreditCard,
-                                    requireCash
+                                    requireCash,
+                                    filterAvailableOnly
                                 )
                             }
                             else {
@@ -298,7 +302,7 @@ private fun SearchScreenContent (
         if (showFilterDialog) {
             FilterDialog(
                 { showFilterDialog = false },
-                { s: Int, dMin: Double, dMax: Double, pMin: Double, pMax: Double, tMin: Double, tMax: Double, rMW: Boolean, rCC: Boolean, rCash: Boolean ->
+                { s: Int, dMin: Double, dMax: Double, pMin: Double, pMax: Double, tMin: Double, tMax: Double, rMW: Boolean, rCC: Boolean, rCash: Boolean, a: Boolean ->
                     filterSpeed = s
                     filterDistanceMin = dMin
                     filterDistanceMax = dMax
@@ -309,6 +313,7 @@ private fun SearchScreenContent (
                     requireMbWay = rMW
                     requireCreditCard = rCC
                     requireCash = rCash
+                    filterAvailableOnly = a
                 },
                 filterSpeed,
                 filterDistanceMin,
@@ -319,7 +324,8 @@ private fun SearchScreenContent (
                 filterTravelTimeMax,
                 requireMbWay,
                 requireCreditCard,
-                requireCash
+                requireCash,
+                filterAvailableOnly
             )
         }
     }
@@ -361,7 +367,7 @@ fun SortDialog(
 @Composable
 fun FilterDialog(
     onDismiss: () -> Unit,
-    onConfirm: (Int, Double, Double, Double, Double, Double, Double, Boolean, Boolean, Boolean) -> Unit,
+    onConfirm: (Int, Double, Double, Double, Double, Double, Double, Boolean, Boolean, Boolean, Boolean) -> Unit,
     prevFilterSpeed: Int,
     prevFilterDistanceMin: Double,
     prevFilterDistanceMax: Double,
@@ -371,7 +377,8 @@ fun FilterDialog(
     prevFilterTravelTimeMax: Double,
     prevRequireMbWay: Boolean,
     prevRequireCreditCard: Boolean,
-    prevRequireCash: Boolean
+    prevRequireCash: Boolean,
+    prevAvailabilityOnly: Boolean
 ) {
     var selectedSpeed = prevFilterSpeed
     var selectedDistanceMin = prevFilterDistanceMin
@@ -383,6 +390,7 @@ fun FilterDialog(
     var selectedRequireMbWay = prevRequireMbWay
     var selectedRequireCreditCard = prevRequireCreditCard
     var selectedRequireCash = prevRequireCash
+    var selectedAvailabilityOnly = prevAvailabilityOnly
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -393,7 +401,7 @@ fun FilterDialog(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                AvailabilityFilter()
+                AvailabilityFilter({a:Boolean -> selectedAvailabilityOnly = a}, selectedAvailabilityOnly)
                 Spacer(Modifier.size(8.dp))
                 HorizontalDivider()
                 Spacer(Modifier.size(8.dp))
@@ -439,7 +447,7 @@ fun FilterDialog(
             TextButton(onClick = {
                 onConfirm(
                     selectedSpeed, selectedDistanceMin, selectedDistanceMax, selectedPriceMin, selectedPriceMax,
-                    selectedTravelTimeMin, selectedTravelTimeMax, selectedRequireMbWay, selectedRequireCreditCard, selectedRequireCash)
+                    selectedTravelTimeMin, selectedTravelTimeMax, selectedRequireMbWay, selectedRequireCreditCard, selectedRequireCash, selectedAvailabilityOnly)
                 onDismiss()
             }) {
                 Text("Ok")
@@ -457,7 +465,7 @@ fun FilterDialog(
 fun SortOptionsDropdown(onOptionChange: (String) -> Unit, onComplete: () -> Unit, savedText: String) {
     var mExpanded by remember { mutableStateOf(true) }
 
-    val mOptions = listOf("Distance", "Price", "Travel Time", "Availability") /*TODO: pôr a Availability pela ordem alfabética caso ela chegue a ser implementada*/
+    val mOptions = listOf("Distance", "Price", "Travel Time")
     var mSelectedText by remember { mutableStateOf(savedText) }
     var mTextFieldSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero)}
 
@@ -738,10 +746,32 @@ fun PriceFilter (
 
 
 @Composable
-fun AvailabilityFilter() {
-    // TODO: availability filter
-    Column {
+fun AvailabilityFilter(onSelectionChange: (Boolean)->Unit, selectedAvailabilityOnly: Boolean) {
+    var availability by remember { mutableStateOf(selectedAvailabilityOnly) }
 
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.padding(end=40.dp)
+        ) {
+            Text(
+                "Available Chargers Only",
+                fontSize = 18.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Start
+            )
+            Switch(
+                checked = availability,
+                onCheckedChange = { availability = it; onSelectionChange(availability) },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = mainColor,
+                    checkedTrackColor = mainColor.copy(alpha = 0.5f),
+                    uncheckedThumbColor = Color.Gray,
+                    uncheckedTrackColor = Color.LightGray
+                )
+            )
+        }
     }
 }
 
