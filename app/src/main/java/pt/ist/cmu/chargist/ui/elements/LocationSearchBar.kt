@@ -89,7 +89,7 @@ fun LocationSearchBar (
     }
 
     LaunchedEffect(Unit) {
-        if (usingMyLocation) {
+        if (usingMyLocation && myLocation != null) {
             Toast.makeText(context, "Using current location", Toast.LENGTH_SHORT).show()
         }
     }
