@@ -118,10 +118,10 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
                         viewModelScope.launch {
                             userRepository.insert(user)
                         }
-                        Log.d("Firestore", "User created with ID: $uid")
+                        Log.d("RegisterViewModel", "User created with ID: $uid")
                     }
                     .addOnFailureListener { e ->
-                        Log.e("Firestore", "Error creating user", e)
+                        Log.e("RegisterViewModel", "Error creating user", e)
                     }
 
                 authRepository.signUp(email, password)

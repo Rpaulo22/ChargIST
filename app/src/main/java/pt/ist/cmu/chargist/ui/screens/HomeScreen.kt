@@ -815,10 +815,11 @@ fun ChargerImage(
 
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    val connectedToMobileData = isUsingMobileData(context)
+    var connected = connectionStatus()
+    var connectedToMobileData = isUsingMobileData(context)
 
     LaunchedEffect(Unit) {
-        if (!connectedToMobileData) {
+        if (!connected && !connectedToMobileData) {
             val photoBytes = appViewModel.downloadChargerPhoto(charger.id)
             if (photoBytes != null) {
                 bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.size)
@@ -839,7 +840,7 @@ fun ChargerImage(
     }
 
     // Charger Picture
-    if (isLoading) {
+    if (connected && isLoading) {
         Text(
             text="Loading...",
             textAlign = TextAlign.Center,
