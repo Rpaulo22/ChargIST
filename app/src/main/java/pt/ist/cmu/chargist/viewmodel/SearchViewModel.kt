@@ -10,6 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import coil.util.CoilUtils.result
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.GeoPoint
@@ -41,6 +42,7 @@ import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
 import java.util.Locale
 import pt.ist.cmu.chargist.model.firebase.queryDocumentsAtLocation
+import java.time.Instant
 
 class SearchViewModel(application: Application) : AndroidViewModel(application) {
     val locationSearchResults = MutableStateFlow(listOf<Address>())
@@ -118,7 +120,8 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
         maxTravelTime: Double,
         requireMbWay: Boolean,
         requireCreditCard: Boolean,
-        requireCash: Boolean
+        requireCash: Boolean,
+        filterAvailabilityOnly: Boolean
     ) {
         viewModelScope.launch {
             // Não faço ideia porquê, mas isto faz o primeiro collect com o estado inicial se a lista estiver vazia faz-se duas vezes e está resolvido, se de facto estiver vazio, também não se perde nada
@@ -189,6 +192,13 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                     .filter { c ->
                         hasChargingSpeed(c, filterSpeed)
                     }
+                    // Availability
+                    .filter { c ->
+                        when (filterAvailabilityOnly) {
+                            true -> isAvailable(c)
+                            false -> true
+                        }
+                    }
 
                 Log.d("Search Charger", "FilteredChargers=" + filteredChargers.toString())
 
@@ -210,7 +220,6 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                             LatLng(c.latitude, c.longitude)
                         )
                     }
-                    //"Availability" -> 0 // TODO: quando/se AVAILIBILITY?
                     else -> filteredChargers
                 }
 
@@ -234,8 +243,6 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                         Pair(it, info)
                     }
 
-                    //"Availability" -> 0 // TODO: quando/se AVAILIBILITY?
-
                     else -> sortedChargers.map {
                         Pair(it, "")
                     }
@@ -244,6 +251,21 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                 onSearch(pairList)
             }
         }
+    }
+
+    private suspend fun isAvailable(c: Charger): Boolean {
+        val slotsFlow = slotRepository.getSlots(c.chargingSlots)
+        var result = false
+        slotsFlow.take(1).collect { slots ->
+            Log.d("Search Charger", "Charging speed check for slots $slots")
+            for (slot in slots) {
+                if (slot.occupiedUntil <= Instant.now().toEpochMilli()) {
+                    result = true
+                    break
+                }
+            }
+        }
+        return result
     }
 
     private fun getSlotSpeed(slot: ChargingSlot): Int {
