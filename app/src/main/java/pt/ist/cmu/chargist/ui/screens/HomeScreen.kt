@@ -796,6 +796,17 @@ fun ChargerImage(
         isLoading = false
     }
 
+    var downloadPhotoWhileConnectedToData by remember { mutableStateOf(false) }
+
+    LaunchedEffect(downloadPhotoWhileConnectedToData) {
+        if (downloadPhotoWhileConnectedToData) {
+            val photoBytes = appViewModel.downloadChargerPhoto(charger.id)
+            if (photoBytes != null) {
+                bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.size)
+            }
+        }
+    }
+
     // Charger Picture
     if (isLoading) {
         Text(
@@ -825,7 +836,10 @@ fun ChargerImage(
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp)),
+                .clip(RoundedCornerShape(16.dp))
+                .clickable {
+                    if (connectedToMobileData) downloadPhotoWhileConnectedToData = true
+                }
         )
     }
 }
