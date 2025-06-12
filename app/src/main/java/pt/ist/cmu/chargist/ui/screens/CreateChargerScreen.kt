@@ -196,17 +196,29 @@ fun ChargerForm(
 
         if (holdLatLng == null) {
             if (dataLoaded && latitude != null && longitude != null) {
-            LocationSearchBar(
-                onLocationUpdate = {
-                    Log.d("LocationUpdate", "$it")
-                    latitude = it?.latitude
-                    longitude = it?.longitude
-                    Log.d("LocationUpdate", "after $latitude $longitude")
-                },
-                mapViewModel = mapViewModel,
-                initInCurrentLocation = if (userLocation.value != null) !edit else false,
-                starterCoords = LatLng(latitude!!, longitude!!)
-            )}
+                LocationSearchBar(
+                    onLocationUpdate = {
+                        Log.d("LocationUpdate", "$it")
+                        latitude = it?.latitude
+                        longitude = it?.longitude
+                        Log.d("LocationUpdate", "after $latitude $longitude")
+                    },
+                    mapViewModel = mapViewModel,
+                    initInCurrentLocation = if (userLocation.value != null) !edit else false,
+                    starterCoords = LatLng(latitude!!, longitude!!)
+                )
+            } else if (userLocation.value == null) { // no location, no starter coords
+                LocationSearchBar(
+                    onLocationUpdate = {
+                        Log.d("LocationUpdate", "$it")
+                        latitude = it?.latitude
+                        longitude = it?.longitude
+                        Log.d("LocationUpdate", "after $latitude $longitude")
+                    },
+                    mapViewModel = mapViewModel,
+                    initInCurrentLocation = if (userLocation.value != null) !edit else false
+                )
+            }
         }
         else {
             Text(
