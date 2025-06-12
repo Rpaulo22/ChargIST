@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -168,8 +169,12 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import pt.ist.cmu.chargist.viewmodel.connectionStatus
+import pt.ist.cmu.chargist.viewmodel.isUsingMobileData
 import kotlinx.coroutines.flow.flowOf
-import pt.ist.cmu.chargist.connectionStatus
 
 @Composable
 fun HomeScreen(
@@ -256,8 +261,12 @@ fun Map(
 
     var showChargerInformationPanel by remember { mutableStateOf(false) }
 
-    var showMapLongClickDialog by remember { mutableStateOf(false) }
-    var mapLongClickLatLng by remember {mutableStateOf<LatLng?>(null)}
+    var showMapHoldDialog by remember { mutableStateOf(false) }
+    var mapHoldLatLng by remember {mutableStateOf<LatLng?>(null)}
+    var holdLocationText by remember { mutableStateOf<String>("") }
+    LaunchedEffect(mapHoldLatLng) {
+        mapHoldLatLng?.let { holdLocationText = mapViewModel.getAddress(context, it) }
+    }
 
     var connected = connectionStatus()
 
@@ -294,8 +303,8 @@ fun Map(
             properties = mapProperties,
             mapColorScheme = colorScheme,
             onMapLongClick = { latLng ->
-                showMapLongClickDialog = true
-                mapLongClickLatLng = latLng
+                showMapHoldDialog = true
+                mapHoldLatLng = latLng
             }
         ) {
 
@@ -347,11 +356,12 @@ fun Map(
             favoriteChargers = favoriteChargers
         )
     }
-    if (showMapLongClickDialog) {
-        MapLongClickDialog(
-            clickedLatLng = mapLongClickLatLng!!,
+    if (showMapHoldDialog) {
+        MapHoldDialog(
+            clickedLatLng = mapHoldLatLng!!,
             onCreateChargerByHoldingOnMap = onCreateChargerByHoldingOnMap,
-            onDismiss = { showMapLongClickDialog = false },
+            onDismiss = { showMapHoldDialog = false },
+            holdLocationText = holdLocationText,
         )
     }
 }
@@ -783,22 +793,28 @@ fun ChargerImage(
     charger:Charger,
     favourite: Boolean
 ) {
+    val context = LocalContext.current
+
     var isLoading by remember { mutableStateOf(true) }
 
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
+    val connectedToMobileData = isUsingMobileData(context)
+
     LaunchedEffect(Unit) {
-        val photoBytes = appViewModel.downloadChargerPhoto(charger.id)
-        isLoading = false
-        if (photoBytes != null) {
-            bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.size)
+        if (!connectedToMobileData) {
+            val photoBytes = appViewModel.downloadChargerPhoto(charger.id)
+            if (photoBytes != null) {
+                bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.size)
+            }
         }
+        isLoading = false
     }
 
     // Charger Picture
     if (isLoading) {
         Text(
-            text="Loading Image...",
+            text="Loading...",
             textAlign = TextAlign.Center,
             color = mainColor,
             fontSize = 24.sp,
@@ -1182,15 +1198,29 @@ fun RelevantNearbyServices(
 }
 
 @Composable
-fun MapLongClickDialog(
+fun MapHoldDialog(
     clickedLatLng: LatLng,
     onCreateChargerByHoldingOnMap: (LatLng) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    holdLocationText: String
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Create charger here?: $clickedLatLng")
+            Box(
+                modifier = Modifier
+                    .wrapContentWidth()
+                    .padding(horizontal = 2.dp)
+            ) {
+                Text(
+                    buildAnnotatedString {
+                        append("Create charger at:\n")
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(holdLocationText)
+                        }
+                    },
+                )
+            }
         },
         confirmButton = {
             TextButton(

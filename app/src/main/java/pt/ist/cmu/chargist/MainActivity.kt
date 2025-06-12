@@ -1,8 +1,10 @@
 package pt.ist.cmu.chargist
 
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.net.ConnectivityManager
 import android.net.Network
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -40,6 +42,7 @@ import com.google.android.libraries.places.api.Places
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         if (!Places.isInitialized()) {
             Places.initialize(applicationContext, BuildConfig.MAPS_API_KEY)
         }
@@ -279,34 +282,4 @@ fun AppNavigation() {
             )
         }
     }
-}
-
-// function that verifies if client has connection to internet
-@Composable
-fun connectionStatus(): Boolean {
-    val context = LocalContext.current
-    val connected = remember { mutableStateOf(false) }
-
-    DisposableEffect(Unit) {
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                connected.value = true
-            }
-
-            override fun onLost(network: Network) {
-                connected.value = false
-            }
-        }
-
-        connectivityManager.registerDefaultNetworkCallback(callback)
-
-        onDispose {
-            connectivityManager.unregisterNetworkCallback(callback)
-        }
-    }
-
-    return connected.value
 }

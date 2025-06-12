@@ -74,7 +74,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         if (_isLoggingIn.value) return
         viewModelScope.launch {
-            _isLoggingInAsGuest.value = true
+            _isLoggingIn.value = true
             try {
                 if (!email.isValidEmail()) {
                     throw IllegalArgumentException("Invalid email format")
@@ -83,8 +83,10 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     throw IllegalArgumentException("Invalid password format")
                 }
                 authRepository.signIn(email, password)
+                _isLoggingIn.value = false
                 _loginSuccess.value = true
             } catch (e: Exception) {
+                _isLoggingIn.value = false
                 _loginFailure.value = true
                 Log.e("LoginViewModel", "signIn(): caught an exception: $e")
             }
@@ -103,8 +105,10 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                     authRepository.createGuestAccount()
                     addUserToDatabase("", username, "")
                 }
+                _isLoggingInAsGuest.value = false
                 _loginSuccess.value = true
             } catch (e: Exception) {
+                _isLoggingInAsGuest.value = false
                 Log.e("LoginViewModel", "continueAsGuest(): caught an exception: $e")
             }
         }
@@ -145,8 +149,4 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 Log.e("Firestore", "Error creating user", e)
             }
     }
-
-    fun CharSequence?.isValidEmail() = !isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(this).matches()
-
-    fun CharSequence?.isValidPassword() = !isNullOrEmpty() && this.length >= 6
 }

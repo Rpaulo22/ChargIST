@@ -60,9 +60,10 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import pt.ist.cmu.chargist.R
-import pt.ist.cmu.chargist.connectionStatus
+import pt.ist.cmu.chargist.viewmodel.connectionStatus
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
 import pt.ist.cmu.chargist.viewmodel.LoginViewModel
+import pt.ist.cmu.chargist.viewmodel.isValidUsername
 import kotlin.math.log
 
 @Composable
@@ -154,7 +155,7 @@ fun LoginScreen(
         OutlinedButton(
             onClick = {
                 if (connected) loginViewModel.signIn(email, password)
-                else Toast.makeText(context, "Please connect to the internet to login", Toast.LENGTH_SHORT).show()
+                else Toast.makeText(context, "Please connect to the internet to log in", Toast.LENGTH_SHORT).show()
             },
             colors = ButtonColors(Color.Transparent, mainColor, Color.Transparent, Color.LightGray),
             shape = RoundedCornerShape(6.dp),
@@ -249,7 +250,3 @@ fun GuestUsernameDialog(
         }
     )
 }
-
-
-
-fun CharSequence?.isValidUsername() = !isNullOrEmpty() && this.length >= 3

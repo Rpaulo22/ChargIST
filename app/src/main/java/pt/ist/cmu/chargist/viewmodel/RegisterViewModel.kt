@@ -64,21 +64,25 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
             try {
                 if (!email.isValidEmail()) {
                     _invalidEmail.value = true
+                    _isSigningUp.value = false
                     return@launch
                 }
                 _invalidEmail.value = false
                 if (!username.isValidUsername()) {
                     _invalidUsername.value = true
+                    _isSigningUp.value = false
                     return@launch
                 }
                 _invalidUsername.value = false
                 if (!password.isValidPassword()) {
                     _invalidPassword.value = true
+                    _isSigningUp.value = false
                     return@launch
                 }
                 _invalidPassword.value = false
                 if (repeatPassword != password) {
                     _invalidRepeatPassword.value = true
+                    _isSigningUp.value = false
                     return@launch
                 }
                 _invalidRepeatPassword.value = false
@@ -122,16 +126,11 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
 
                 authRepository.signUp(email, password)
 
+                _isSigningUp.value = false
                 _shouldRestartApp.value = true
             } catch (e: Exception) {
                 Log.e("RegisterViewModel", "Caught an exception: $e")
             }
         }
     }
-
-    fun CharSequence?.isValidEmail() = !isNullOrEmpty() && Patterns.EMAIL_ADDRESS.matcher(this).matches()
-
-    fun CharSequence?.isValidUsername() = !isNullOrEmpty() && this.length >= 3
-
-    fun CharSequence?.isValidPassword() = !isNullOrEmpty() && this.length >= 6
 }
