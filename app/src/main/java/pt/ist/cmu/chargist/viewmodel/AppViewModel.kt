@@ -2,6 +2,7 @@ package pt.ist.cmu.chargist.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.location.Location
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -9,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
@@ -453,8 +455,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     val chargerRef = db.collection("Charger").document(charger.id)
                     tx.delete(chargerRef)
                 }.addOnSuccessListener {
-                    val geoFirestore = GeoFirestore(db.collection("charger"))
-                    geoFirestore.removeLocation(chargerId)
+                    Firebase.firestore.collection("charger").document(chargerId).delete()
 
                     viewModelScope.launch {
                         for (slotId in charger.chargingSlots) {
@@ -655,13 +656,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         currentUser.value = user.copy(favoriteChargers = newFavorites)
     }
 
+    val deleteSuccess = MutableStateFlow(false)
+
     fun deleteAccount() {
         try {
             viewModelScope.launch {
-                Log.e("AppViewModel", "1")
                 val uidAux = currentUser.value!!.id
                 val chargerList = allChargers.first()
-                Log.e("AppViewModel", allChargers.value.toString())
                 chargerList.forEach { charger ->
                     // delete all chargers owned by the to be deleted user
                     if (charger.ownerId == uidAux) {
@@ -672,10 +673,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                         rateCharger(charger, 0.0)
                     }
                 }
-                Log.e("AppViewModel", "2")
                 // delete the user
                 authRepository.deleteAccount()
                 userRepository.delete(currentUser.value!!)
+                deleteSuccess.value = true
            }
             Log.d("AppViewModel", "Successfully deleted user account")
         } catch (e: Exception) {
@@ -768,6 +769,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             // charger has no photo
             return null
         }
+    }
+
+    suspend fun checkIfNoCloseChargers(chargerId: String?, lat: Double, lng: Double) : Boolean {
+        val minimumDistanceBetweenChargers = 0.250 // in km
+        val chargerList = allChargers.first()
+        for (charger in chargerList) {
+            if (chargerId != null && chargerId == charger.id) continue // skip if editing charger and its same charger
+            if (calcDistance(
+                LatLng(lat, lng),
+                LatLng(charger.latitude, charger.longitude)
+            ) <= minimumDistanceBetweenChargers) {
+                return false
+            }
+        }
+        return true
     }
 }
 

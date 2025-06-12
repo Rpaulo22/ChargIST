@@ -46,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -93,7 +94,8 @@ fun ChargerForm(
     holdLatLng: LatLng? = null // if this value is not null, a charger is being created by choosing a location directly on map
 ) {
     val context = LocalContext.current
-    
+    appViewModel.allChargers.collectAsState()
+
     val edit = (chargerId != null)
     var dataLoaded by remember {mutableStateOf(false)} // indicates if charger info has been loaded
 
@@ -207,7 +209,11 @@ fun ChargerForm(
             )}
         }
         else {
-            Text(holdLocationText)
+            Text(
+                text = holdLocationText,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold
+            )
             latitude = holdLatLng.latitude
             longitude = holdLatLng.longitude
         }
@@ -230,7 +236,7 @@ fun ChargerForm(
             Camera(
                 capturedImageUri = capturedImageUri,
                 changeCapturedImageUri = { newCapturedImageUri -> capturedImageUri = newCapturedImageUri }
-                )
+            )
 
             Spacer(Modifier.size(5.dp))
             HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
@@ -404,7 +410,10 @@ fun ChargerForm(
                         coroutineScope.launch {
                             try {
                                 Log.d("LocationUpdate", "lat:$latitude | long:$longitude")
-                                if (!edit) {
+                                if (!appViewModel.checkIfNoCloseChargers(chargerId, latitude!!, longitude!!)) {
+                                    Toast.makeText(context, "Too close to another charger (minimum 250 meters)", Toast.LENGTH_SHORT).show()
+                                }
+                                else if (!edit) {
                                     appViewModel.createCharger(
                                         context = context,
                                         name = chargerName,
@@ -420,6 +429,7 @@ fun ChargerForm(
                                         lng = longitude ?: 0.0,
                                         capturedImageUri = capturedImageUri
                                     )
+                                    onCreateClick()
                                 } else {
                                     appViewModel.updateCharger(
                                         context = context,
@@ -437,10 +447,10 @@ fun ChargerForm(
                                         deletedSlots = deletedSlots,
                                         capturedImageUri = capturedImageUri
                                     )
+                                    onCreateClick()
                                 }
-                                onCreateClick()
                             } catch (e: Exception) {
-                                Log.e("Error", e.toString())
+                                Log.e("CreateChargerScreen", e.toString())
                             }
                         }
                     },
@@ -664,7 +674,7 @@ fun Camera(
                         permissionLauncher.launch(Manifest.permission.CAMERA)
                 }
             }) {
-                Text(text = "Capture Image From Camera")
+                Text(text = "Take Photo")
             }
         }
     }
