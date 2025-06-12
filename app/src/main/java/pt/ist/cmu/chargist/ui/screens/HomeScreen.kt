@@ -168,6 +168,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.runtime.DisposableEffect
+import kotlinx.coroutines.flow.flowOf
 import pt.ist.cmu.chargist.connectionStatus
 
 @Composable
@@ -340,10 +341,10 @@ fun Map(
         ChargerInformationPanel(
             onDismiss = { showChargerInformationPanel = false },
             onEditCharger = onEditCharger,
-            charger = selectedCharger,
+            chargerId = selectedCharger?.id ?: "",
             mapViewModel = mapViewModel,
             appViewModel = appViewModel,
-            favoriteChargers = favoriteChargers,
+            favoriteChargers = favoriteChargers
         )
     }
     if (showMapLongClickDialog) {
@@ -465,7 +466,7 @@ fun SimpleMapMarker(
 
 @Composable
 fun ChargerInformationPanel(
-    charger: Charger?,
+    chargerId: String,
     onDismiss: () -> Unit,
     onEditCharger: (String) -> Unit,
     mapViewModel: MapViewModel,
@@ -476,30 +477,44 @@ fun ChargerInformationPanel(
 
     val uid = appViewModel.uid
 
+    val charger by appViewModel.getChargerFlowById(chargerId).collectAsState(initial = null)
+
     if (charger == null) {
-        Toast.makeText(context, "Error loading charger information \uD83D\uDE14", Toast.LENGTH_LONG).show()
         return
     }
 
     var chargerAddress by remember { mutableStateOf("Loading...") }
 
     LaunchedEffect(Unit) { // launch coroutine to obtain charger address
-        chargerAddress = mapViewModel.getAddress(context, LatLng(charger.latitude,charger.longitude))
+        chargerAddress = mapViewModel.getAddress(context, LatLng(charger!!.latitude,charger!!.longitude))
     }
 
-    var favourite by remember { mutableStateOf(favoriteChargers.contains(charger.id) == true )}
+    var favourite by remember { mutableStateOf(favoriteChargers.contains(charger!!.id) == true )}
     var favouriteChanged by remember { mutableStateOf(false) }
 
-    val slotsFlow = appViewModel.getCorrespondingChargingSlots(charger)
+    val slotsFlow = charger?.let { appViewModel.getCorrespondingChargingSlots(it) } ?: flowOf(emptyList())
     val slots by slotsFlow.collectAsState(initial = emptyList())
 
-    var personalRating by remember { mutableStateOf(charger.ratings[uid] ?: 0.0) }
+    LaunchedEffect(slotsFlow) {
+        slotsFlow.collect { updatedSlots ->
+            Log.d("SlotsDebug", "Updated slots: ${updatedSlots.size}")
+        }
+    }
+
+    var personalRating by remember { mutableStateOf(charger!!.ratings[uid] ?: 0.0) }
     var personalRatingChanged by remember { mutableStateOf(false) }
 
     var slotDialog by remember {mutableStateOf(false)}
     var selectedSlot by remember { mutableIntStateOf(0) }
 
     var titleScrollState = rememberScrollState()
+
+    LaunchedEffect (Unit) {
+        while(true) {
+            appViewModel.reloadCharger(charger!!.id)
+            delay(3000)
+        }
+    }
 
     AlertDialog(
         modifier = Modifier
@@ -513,7 +528,7 @@ fun ChargerInformationPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = charger.name,
+                    text = charger!!.name,
                     modifier = Modifier
                         .horizontalScroll(titleScrollState)
                         .weight(1f),
@@ -553,7 +568,7 @@ fun ChargerInformationPanel(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                ChargerImage(appViewModel, charger, favourite)
+                ChargerImage(appViewModel, charger!!, favourite)
 
                 Spacer(Modifier.size(10.dp))
 
@@ -576,7 +591,7 @@ fun ChargerInformationPanel(
                         Button(
                             onClick = {
                                 val gmmIntentUri =
-                                    "https://www.google.com/maps/dir/?api=1&destination=${charger.latitude},${charger.longitude}&travelmode=driving".toUri()
+                                    "https://www.google.com/maps/dir/?api=1&destination=${charger!!.latitude},${charger!!.longitude}&travelmode=driving".toUri()
                                 val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
                                 mapIntent.setPackage("com.google.android.apps.maps")
                                 if (mapIntent.resolveActivity(context.packageManager) != null) {
@@ -610,12 +625,12 @@ fun ChargerInformationPanel(
                         Button(
                             onClick = {
                                 val mapsUrl =
-                                    "https://www.google.com/maps/search/?api=1&query=${charger.latitude},${charger.longitude}"
+                                    "https://www.google.com/maps/search/?api=1&query=${charger!!.latitude},${charger!!.longitude}"
                                 val sendIntent = Intent().apply {
                                     action = Intent.ACTION_SEND
                                     putExtra(
                                         Intent.EXTRA_TEXT,
-                                        "Using ChargIST, I just found this charger!\nCheck out \"${charger.name}\" at:\n $mapsUrl"
+                                        "Using ChargIST, I just found this charger!\nCheck out \"${charger!!.name}\" at:\n $mapsUrl"
                                     )
                                     type = "text/plain"
                                 }
@@ -651,9 +666,9 @@ fun ChargerInformationPanel(
                 Text("Available payment methods:", textAlign = TextAlign.Center)
                 Spacer(Modifier.size(6.dp))
                 PaymentMethods(
-                    mbWay = charger.mbWay,
-                    creditCard = charger.creditCard,
-                    cash = charger.cash,
+                    mbWay = charger!!.mbWay,
+                    creditCard = charger!!.creditCard,
+                    cash = charger!!.cash,
                     size = 30
                 )
 
@@ -680,11 +695,11 @@ fun ChargerInformationPanel(
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
                 // Prices
-                Text("Slow price: ${charger.priceSlow} €/kWh")
+                Text("Slow price: ${charger!!.priceSlow} €/kWh")
                 Spacer(Modifier.size(6.dp))
-                Text("Medium price: ${charger.priceMedium} €/kWh")
+                Text("Medium price: ${charger!!.priceMedium} €/kWh")
                 Spacer(Modifier.size(6.dp))
-                Text("Fast price: ${charger.priceFast} €/kWh")
+                Text("Fast price: ${charger!!.priceFast} €/kWh")
 
                 HorizontalDivider(modifier = Modifier.padding(16.dp), thickness = 1.dp)
 
@@ -692,7 +707,7 @@ fun ChargerInformationPanel(
                 Row (
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Rating: ${if (charger.ratingsMean != 0.0) charger.ratingsMean else "None"}")
+                    Text("Rating: ${if (charger!!.ratingsMean != 0.0) charger!!.ratingsMean else "None"}")
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = "Star",
@@ -710,15 +725,15 @@ fun ChargerInformationPanel(
                     }
                 )
                 Spacer(Modifier.size(6.dp))
-                RatingHistogram(charger.ratings)
+                RatingHistogram(charger!!.ratings)
 
                 HorizontalDivider(Modifier.padding(14.dp), thickness = 1.dp)
 
                 RelevantNearbyServices(
                     context,
                     mapViewModel,
-                    charger.latitude,
-                    charger.longitude
+                    charger!!.latitude,
+                    charger!!.longitude
                 )
             }
         },
@@ -727,23 +742,23 @@ fun ChargerInformationPanel(
                 onClick = {
                     if (favouriteChanged) {
                         if (favourite) {
-                            appViewModel.favoriteCharger(charger)
+                            appViewModel.favoriteCharger(charger!!)
                         }
                         else {
-                            appViewModel.unfavoriteCharger(charger)
+                            appViewModel.unfavoriteCharger(charger!!)
                         }
                     }
-                    if (personalRatingChanged) appViewModel.rateCharger(charger, personalRating)
+                    if (personalRatingChanged) appViewModel.rateCharger(charger!!, personalRating)
                     onDismiss()
                 }) {
                 Text("Back")
             }
         },
         dismissButton = {
-            if (uid == charger.ownerId) {
+            if (uid == charger!!.ownerId) {
                 TextButton(
                     onClick = {
-                        onEditCharger(charger.id)
+                        onEditCharger(charger!!.id)
                         onDismiss()
                     }) {
                     Text("Edit")
@@ -755,7 +770,7 @@ fun ChargerInformationPanel(
         ChargingSlotDialog(
             slot = slots[selectedSlot],
             number = selectedSlot,
-            chargerName = charger.name,
+            chargerName = charger!!.name,
             onDismiss = {slotDialog = false},
             appViewModel = appViewModel
         )
@@ -859,11 +874,10 @@ fun ChargingSlotField(
     slot: ChargingSlot,
     onClick: () -> Unit
 ) {
-    val currentTimestamp by rememberUpdatedState(Instant.now().toEpochMilli())
+    val currentTimestamp = rememberUpdatedState(Instant.now().toEpochMilli())
 
-    val occupied by remember { derivedStateOf { currentTimestamp <= slot.occupiedUntil }}
-
-    val color by remember { derivedStateOf { if (occupied) Color(199, 45, 45, 255) else mainColor }}
+    val occupied = currentTimestamp.value <= slot.occupiedUntil
+    val color = if (occupied) Color(199, 45, 45, 255) else mainColor
 
     Box(
         Modifier

@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
@@ -420,6 +421,71 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     }
 
+    fun reloadCharger(chargerId: String) {
+        val db = Firebase.firestore
+
+        db.collection("Charger")
+            .document(chargerId).get()
+            .addOnSuccessListener { result ->
+                val id = result.id
+                val coords = result.getGeoPoint("location") ?: GeoPoint(0.0,0.0)
+                val prices = (result.data?.get("price") ?: mapOf<String,Number>()) as Map<String, Number>
+                val name = result.getString("name") ?: ""
+                val ownerId = result.getString("ownerId") ?: ""
+                val slots = (result.data?.get("chargingSlots") ?: listOf<String>()) as List<String>
+                val creditCard = result.getBoolean("creditCard") ?: false
+                val mbWay = result.getBoolean("mbWay") ?: false
+                val cash = result.getBoolean("cash") ?: false
+                val priceFast = prices["fast"]?.toDouble() ?: -1.0
+                val priceMedium = prices["medium"]?.toDouble() ?: -1.0
+                val priceSlow = prices["slow"]?.toDouble() ?: -1.0
+                val ratings = (result.data?.get("ratings") ?: mapOf<String,Double>()) as Map<String, Double>
+                val ratingsMean = result.getDouble("ratingsMean") ?: -1.0
+
+                val charger = Charger(
+                    id = id,
+                    name = name,
+                    chargingSlots = slots,
+                    ownerId = ownerId,
+                    latitude = coords.latitude,
+                    longitude = coords.longitude,
+                    creditCard = creditCard,
+                    mbWay = mbWay,
+                    cash = cash,
+                    priceFast = priceFast,
+                    priceMedium = priceMedium,
+                    priceSlow = priceSlow,
+                    ratings = ratings,
+                    ratingsMean = ratingsMean
+                )
+
+                for (id in slots) {
+                    db.collection("ChargingSlot").document(id).get()
+                        .addOnSuccessListener { document ->
+                            val slot = ChargingSlot(
+                                id = document.id,
+                                speed = document.getString("speed") ?: "",
+                                type = document.getString("type") ?: "",
+                                occupiedUntil = document.getLong("occupiedUntil") ?: 0,
+                                occupiedBy = document.getString("occupiedBy") ?: ""
+                            )
+                            viewModelScope.launch {
+                                slotRepository.insert(slot)
+                                Log.d("Reload", "Reloading slot ${slot.id}")
+                            }
+                        }
+                }
+
+                viewModelScope.launch {
+                    chargerRepository.update(charger)
+                }
+            }
+            .addOnFailureListener {
+                Log.d("Firebase", "Failed to reload charger")
+                throw Exception("Failed to reload charger")
+            }
+    }
+
     fun deleteCharger(chargerId: String) {
         viewModelScope.launch {
             val charger = getChargerById(chargerId)
@@ -768,6 +834,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             // charger has no photo
             return null
         }
+    }
+
+    fun getChargerFlowById(id: String): Flow<Charger?> {
+        return chargerRepository.getChargerFlowById(id)
     }
 }
 

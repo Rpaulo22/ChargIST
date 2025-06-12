@@ -44,4 +44,7 @@ interface ChargerDao {
     @Query("DELETE FROM charger")
     suspend fun deleteRelevantChargers() // todo this function should only delete chargers in a certain radius
 
+    @Query("SELECT * FROM charger WHERE id = :id")
+    fun getChargerFlow(id:String): Flow<Charger>
+
 }
