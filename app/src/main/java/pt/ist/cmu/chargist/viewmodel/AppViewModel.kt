@@ -34,8 +34,10 @@ import org.imperiumlabs.geofirestore.extension.setLocation
 import pt.ist.cmu.chargist.model.data.AppDatabase
 import pt.ist.cmu.chargist.model.data.Auth
 import pt.ist.cmu.chargist.model.data.Charger
+import pt.ist.cmu.chargist.model.data.ChargerDao
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.data.ChargingSlot
+import pt.ist.cmu.chargist.model.data.ChargingSlotDao
 import pt.ist.cmu.chargist.model.data.User
 import pt.ist.cmu.chargist.model.repository.AuthRepository
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
@@ -64,13 +66,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
 
     var lastSlot by mutableStateOf<ChargingSlot?>(null)
 
+    val chargerDao: ChargerDao
+    val chargingSlotDao: ChargingSlotDao
 
     init {
         val firebaseAuth = FirebaseAuth.getInstance()
         val auth = Auth(firebaseAuth)
         val userDao = AppDatabase.getDatabase(application).userDao()
-        val chargerDao = AppDatabase.getDatabase(application).chargerDao()
-        val chargingSlotDao = AppDatabase.getDatabase(application).chargingSlotDao()
+        chargerDao = AppDatabase.getDatabase(application).chargerDao()
+        chargingSlotDao = AppDatabase.getDatabase(application).chargingSlotDao()
         authRepository = AuthRepository(auth)
         userRepository = UserRepository(userDao)
         chargerRepository = ChargerRepository(chargerDao)
@@ -85,8 +89,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             SharingStarted.WhileSubscribed(5000),
             emptyList()
         )
-
-        reloadChargers()
 
         // get current user
         viewModelScope.launch {
@@ -192,7 +194,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             refs
         }.addOnSuccessListener { refs ->
             // Set location for a document
-            val geoFirestore = GeoFirestore(db.collection("charger"))
+            val geoFirestore = GeoFirestore(db.collection("Charger"))
             geoFirestore.setLocation(refs[0].id, GeoPoint(lat,lng)) { e ->
                 if (e != null) {
                     Log.e("GeoFirestore", "Failed to set location", e)
@@ -319,7 +321,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
             refs
         }.addOnSuccessListener { refs ->
             // Set location for a document
-            val geoFirestore = GeoFirestore(db.collection("charger"))
+            val geoFirestore = GeoFirestore(db.collection("Charger"))
             geoFirestore.setLocation(refs[0].id, GeoPoint(lat,lng)) { e ->
                 if (e != null) {
                     Log.e("GeoFirestore", "Failed to set location", e)
@@ -358,68 +360,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
         }
     }
 
-    fun reloadChargers() {
-        val db = Firebase.firestore
-
-        viewModelScope.launch {
-            chargerRepository.deleteRelevantChargers()
+    var lastUpdatePosition: LatLng? = null
+    var lastUpdateTime: Long? = null
+    fun reloadChargers(updatePosition: LatLng, radius: Double) {
+        val timeThreshold = 1000*60*1 // milliseconds
+        val positionThreshold = 5.0 // kilometers
+        if (lastUpdateTime == null || lastUpdatePosition == null ||
+            calcDistance(lastUpdatePosition!!, updatePosition) > positionThreshold ||
+            Instant.now().toEpochMilli() - lastUpdateTime!! > timeThreshold) {
+            lastUpdateTime = Instant.now().toEpochMilli()
+            lastUpdatePosition = updatePosition
+            viewModelScope.launch {
+                reloadChargersOnLocation(
+                    GeoPoint(
+                        updatePosition.latitude,
+                        updatePosition.longitude
+                    ), radius, chargerDao, chargingSlotDao
+                )
+            }
         }
-
-        db.collection("Charger")
-            .get()
-            .addOnSuccessListener { result ->
-                for (document in result) {
-                    val coords = document.data["location"] as GeoPoint
-                    val prices = document.data["price"] as Map<String, Number>
-                    val charger = Charger(
-                        id = document.id,
-                        name = document.data["name"].toString(),
-                        ownerId = document.data["ownerId"].toString(),
-                        chargingSlots = document.data["chargingSlots"] as List<String>,
-                        creditCard = document.data["creditCard"] as Boolean,
-                        cash = document.data["cash"] as Boolean,
-                        mbWay = document.data["mbWay"] as Boolean,
-                        latitude = coords.latitude,
-                        longitude = coords.longitude,
-                        priceFast = prices["fast"]?.toDouble() ?: -1.0,
-                        priceMedium = prices["medium"]?.toDouble() ?: -1.0,
-                        priceSlow = prices["slow"]?.toDouble() ?: -1.0,
-                        ratings = document.data["ratings"] as Map<String, Double>,
-                        ratingsMean = document.data["ratingsMean"] as Double,
-                    )
-
-                    Log.d("Firebase", "id: ${document.id} | ${document.data}")
-                    viewModelScope.launch {
-                        chargerRepository.insert(charger)
-                    }
-                    if (charger.chargingSlots.isNotEmpty()) {
-                        db.collection("ChargingSlot")
-                            .whereIn(FieldPath.documentId(), charger.chargingSlots)
-                            .get()
-                            .addOnSuccessListener { result ->
-                                for (document in result) {
-                                    val slot = ChargingSlot(
-                                        id = document.id,
-                                        speed = document.data["speed"].toString(),
-                                        type = document.data["type"].toString(),
-                                        occupiedUntil = document.data["occupiedUntil"] as Long,
-                                        occupiedBy = document.data["occupiedBy"].toString()
-                                    )
-                                    viewModelScope.launch {
-                                        slotRepository.insert(slot)
-                                    }
-                                }
-                            }
-                            .addOnFailureListener { exception ->
-                                Log.w("Firebase", "Error getting slots.", exception)
-                            }
-                    }
-                }
-            }
-            .addOnFailureListener { exception ->
-                Log.w("Firebase", "Error getting chargers.", exception)
-            }
-
     }
 
     fun reloadCharger(chargerId: String) {
@@ -520,7 +479,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
                     val chargerRef = db.collection("Charger").document(charger.id)
                     tx.delete(chargerRef)
                 }.addOnSuccessListener {
-                    Firebase.firestore.collection("charger").document(chargerId).delete()
 
                     viewModelScope.launch {
                         for (slotId in charger.chargingSlots) {
@@ -837,6 +795,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application)  {
     }
 
     suspend fun checkIfNoCloseChargers(chargerId: String?, lat: Double, lng: Double) : Boolean {
+        reloadChargersOnLocation(
+            GeoPoint(lat, lng), 1.0, chargerDao, chargingSlotDao
+        )
+
         val minimumDistanceBetweenChargers = 0.050 // in km
         val chargerList = allChargers.first()
         for (charger in chargerList) {

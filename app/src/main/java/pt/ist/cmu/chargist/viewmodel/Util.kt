@@ -35,7 +35,7 @@ suspend fun reloadChargersOnLocation(center: GeoPoint, radius: Double, chargerDa
     Log.d("GeoFirestore", "Updating chargers in a ${radius}km radius around $center")
     // Atualizar carregadores em torno da localização
     val db = Firebase.firestore
-    val chargerRef = db.collection("charger")
+    val chargerRef = db.collection("Charger")
     val geoFirestore = GeoFirestore(chargerRef)
 
     try {
@@ -112,6 +112,7 @@ suspend fun reloadChargersOnLocation(center: GeoPoint, radius: Double, chargerDa
 
     } catch (e : Exception) {
         Log.d("GeoFirestore", "Geo query failed with exception: $e")
+        e.printStackTrace()
     }
 }
 

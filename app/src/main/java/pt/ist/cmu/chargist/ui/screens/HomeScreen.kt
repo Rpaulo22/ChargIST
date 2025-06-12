@@ -172,6 +172,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import com.google.maps.android.compose.currentCameraPositionState
 import pt.ist.cmu.chargist.viewmodel.connectionStatus
 import pt.ist.cmu.chargist.viewmodel.isUsingMobileData
 import kotlinx.coroutines.flow.flowOf
@@ -272,30 +273,45 @@ fun Map(
 
     var selectedCharger by remember { mutableStateOf<Charger?>(null) } // charger whose information panel is showing
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        var mapProperties by remember { mutableStateOf(MapProperties(isMyLocationEnabled = false)) }
-        val colorScheme = ComposeMapColorScheme.FOLLOW_SYSTEM
+    var mapProperties by remember { mutableStateOf(MapProperties(isMyLocationEnabled = false)) }
+    val colorScheme = ComposeMapColorScheme.FOLLOW_SYSTEM
 
-        val istCoords = LatLng(38.736766738322125, -9.139350512479778)
-        var hasMovedCamera by remember { mutableStateOf(false) }
-        val cameraPositionState = rememberCameraPositionState {
-            position = CameraPosition.fromLatLngZoom(centerPoint?:istCoords, 15f) // center camera on passed center point/ IST
-        }
+    val istCoords = LatLng(38.736766738322125, -9.139350512479778)
+    var hasMovedCamera by remember { mutableStateOf(false) }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(centerPoint?:istCoords, 15f) // center camera on passed center point/ IST
+    }
 
-        // If the app has location access, move the camera to user location
-        LaunchedEffect(userLocation) {
-            if (!hasMovedCamera && userLocation != null) {
-                if (centerPoint == null) { // only go to location if no center point provided
-                    cameraPositionState.animate(
-                        CameraUpdateFactory.newLatLngZoom(userLocation, 15f)
-                    )
-                }
-                mapProperties = mapProperties.copy(isMyLocationEnabled = true)
-                hasMovedCamera =
-                    true // only do this once so that the camera is not constantly following user
+    // periodically update the chargers
+    LaunchedEffect(Unit) {
+        while(true) {
+            if (!showChargerInformationPanel && !showMapHoldDialog) {
+                Log.d("LocationUpdate", "Trying to update location")
+                // nearby chargers updated if a time and distance threshold has passed since last update
+                appViewModel.reloadChargers(
+                    cameraPositionState.position.target,
+                    20.0
+                )
             }
+            delay(2500)
         }
+    }
 
+    // If the app has location access, move the camera to user location
+    LaunchedEffect(userLocation) {
+        if (!hasMovedCamera && userLocation != null) {
+            if (centerPoint == null) { // only go to location if no center point provided
+                cameraPositionState.animate(
+                    CameraUpdateFactory.newLatLngZoom(userLocation, 15f)
+                )
+            }
+            mapProperties = mapProperties.copy(isMyLocationEnabled = true)
+            hasMovedCamera =
+                true // only do this once so that the camera is not constantly following user
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
         GoogleMap(
             contentPadding = paddingValues,
             modifier = Modifier.fillMaxSize(),
