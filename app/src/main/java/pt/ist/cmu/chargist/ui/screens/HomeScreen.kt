@@ -1188,7 +1188,7 @@ fun RelevantNearbyServices(
             delay(200)
         }
         result.addAll(mapViewModel.getNearbyServices(context, location) ?: listOf())
-        result.sortBy {it.getOrNull(3)?.toDoubleOrNull() ?: Double.MAX_VALUE} // sorts services by how close they are
+        result.sortBy { it.getOrNull(3)?.replace(",",".")?.toDoubleOrNull() ?: Double.MAX_VALUE } // sorts services by how close they are
         hasPolled = true
     }
 
