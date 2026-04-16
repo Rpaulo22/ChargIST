@@ -1,7 +1,5 @@
 package pt.ist.cmu.chargist.model.repository
 
-import kotlinx.coroutines.flow.Flow
-import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.User
 import pt.ist.cmu.chargist.model.data.UserDao
 

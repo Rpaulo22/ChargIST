@@ -4,32 +4,21 @@ import android.app.Application
 import android.content.Context
 import android.location.Address
 import android.location.Geocoder
-import android.location.Location
 import android.util.Log
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import coil.util.CoilUtils.result
 import com.google.android.gms.maps.model.LatLng
-import com.google.firebase.Firebase
 import com.google.firebase.firestore.GeoPoint
-import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.takeWhile
-import kotlinx.coroutines.flow.toCollection
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.imperiumlabs.geofirestore.GeoFirestore
 import org.json.JSONObject
 import pt.ist.cmu.chargist.BuildConfig
 import pt.ist.cmu.chargist.model.data.AppDatabase
@@ -37,12 +26,10 @@ import pt.ist.cmu.chargist.model.data.Charger
 import pt.ist.cmu.chargist.model.data.ChargerDao
 import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.model.data.ChargingSlotDao
-import pt.ist.cmu.chargist.model.firebase.queryDocumentsAtLocation
 import pt.ist.cmu.chargist.model.repository.ChargerRepository
 import pt.ist.cmu.chargist.model.repository.ChargingSlotRepository
-import java.util.Locale
-import pt.ist.cmu.chargist.model.firebase.queryDocumentsAtLocation
 import java.time.Instant
+import java.util.Locale
 
 class SearchViewModel(application: Application) : AndroidViewModel(application) {
     val locationSearchResults = MutableStateFlow(listOf<Address>())
@@ -91,7 +78,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
     fun onSearchLocation (addresses: MutableList<Address>) {
         Log.d("Search Location", "Got " + addresses.size + " results:")
         locationSearchResults.value = addresses.filter { it.hasLatitude() && it.hasLongitude() }.distinctBy { formatAddress(it) }
-        locationSearchResults.value.forEach { address -> Log.d("Search Location", "    "+address.toString()) }
+        locationSearchResults.value.forEach { address -> Log.d("Search Location", "    $address") }
     }
 
     fun formatAddress(address: Address):String {
@@ -124,7 +111,6 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
         filterAvailabilityOnly: Boolean
     ) {
         viewModelScope.launch {
-            // Não faço ideia porquê, mas isto faz o primeiro collect com o estado inicial se a lista estiver vazia faz-se duas vezes e está resolvido, se de facto estiver vazio, também não se perde nada
             val n = if (allChargers.value.isEmpty()) 2 else 1
             allChargers.take(n).collect { chargers ->
                 // Atualizar BD
@@ -135,7 +121,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                     chargingSlotDao
                 )
 
-                Log.d("Search Charger", "AllChargers=" + chargers)
+                Log.d("Search Charger", "AllChargers=$chargers")
 
                 // Chamadas à API para obter tempo de viagem
                 val pointsToCalc = mutableListOf<LatLng>()
@@ -161,7 +147,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                     calcTravelTimes(location, pointsToCalc)
                 }
 
-                Log.d("Search Charger", "TravelTimes=" + travelTimes.toString())
+                Log.d("Search Charger", "TravelTimes=$travelTimes")
 
                 // Filtrar conteúdo da BD local
                 val filteredChargers = chargers
@@ -200,7 +186,7 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
                         }
                     }
 
-                Log.d("Search Charger", "FilteredChargers=" + filteredChargers.toString())
+                Log.d("Search Charger", "FilteredChargers=$filteredChargers")
 
                 // Ordenar a lista
                 val sortedChargers = when (sortBy) {

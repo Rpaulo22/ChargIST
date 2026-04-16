@@ -1,21 +1,13 @@
 package pt.ist.cmu.chargist
 
-import android.content.Context
 import android.content.pm.ActivityInfo
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -23,10 +15,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.android.gms.maps.model.LatLng
-import pt.ist.cmu.chargist.ui.screens.HomeScreen
-import pt.ist.cmu.chargist.ui.screens.LoginScreen
+import com.google.android.libraries.places.api.Places
 import pt.ist.cmu.chargist.ui.screens.AccountScreen
 import pt.ist.cmu.chargist.ui.screens.ChargerForm
+import pt.ist.cmu.chargist.ui.screens.HomeScreen
+import pt.ist.cmu.chargist.ui.screens.LoginScreen
 import pt.ist.cmu.chargist.ui.screens.RegisterScreen
 import pt.ist.cmu.chargist.ui.screens.SearchScreen
 import pt.ist.cmu.chargist.ui.theme.ChargISTTheme
@@ -36,8 +29,6 @@ import pt.ist.cmu.chargist.viewmodel.LoginViewModel
 import pt.ist.cmu.chargist.viewmodel.MapViewModel
 import pt.ist.cmu.chargist.viewmodel.RegisterViewModel
 import pt.ist.cmu.chargist.viewmodel.SearchViewModel
-import kotlin.collections.listOf
-import com.google.android.libraries.places.api.Places
 
 class MainActivity : ComponentActivity() {
 
@@ -54,15 +45,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ChargISTTheme {
-                Surface() {
+                Surface {
                     AppNavigation()
                 }
             }
         }
     }
-}
-
-private fun reload() {
 }
 
 @Composable

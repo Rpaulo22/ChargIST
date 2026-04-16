@@ -1,24 +1,9 @@
 package pt.ist.cmu.chargist.ui.screens
 
 import android.Manifest
-import android.R.attr.bitmap
-import android.R.attr.navigationIcon
-import android.R.attr.rating
-import android.R.attr.text
-import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Paint
-import android.location.Location
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
-import android.net.Uri
-import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,7 +13,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,34 +23,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Directions
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.HorizontalDivider
@@ -74,108 +47,67 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
-import androidx.compose.material3.ModalBottomSheetDefaults.properties
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ComposableTarget
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.firebase.Firebase
-import com.google.firebase.firestore.GeoPoint
-import com.google.firebase.firestore.auth.User
-import com.google.firebase.firestore.firestore
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.rememberCameraPositionState
-import pt.ist.cmu.chargist.model.data.Charger
-import pt.ist.cmu.chargist.model.data.ChargingSlot
-import pt.ist.cmu.chargist.viewmodel.AppViewModel
-import pt.ist.cmu.chargist.viewmodel.MapViewModel
-import kotlin.reflect.typeOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.colorspace.Rgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
+import androidx.core.net.toUri
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.LocationSource
-import com.google.android.gms.maps.LocationSource.OnLocationChangedListener
-import com.google.android.gms.maps.internal.ILocationSourceDelegate
-import com.google.firebase.auth.FirebaseAuth
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.ComposeMapColorScheme
+import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerComposable
 import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOf
 import pt.ist.cmu.chargist.MainActivity
 import pt.ist.cmu.chargist.R
+import pt.ist.cmu.chargist.model.data.Charger
+import pt.ist.cmu.chargist.model.data.ChargingSlot
 import pt.ist.cmu.chargist.ui.elements.BottomNavigationBar
 import pt.ist.cmu.chargist.ui.theme.AppColors.mainColor
-import java.security.AccessController.getContext
-import androidx.core.net.toUri
-import kotlinx.coroutines.delay
+import pt.ist.cmu.chargist.viewmodel.AppViewModel
+import pt.ist.cmu.chargist.viewmodel.MapViewModel
+import pt.ist.cmu.chargist.viewmodel.connectionStatus
+import pt.ist.cmu.chargist.viewmodel.isUsingMobileData
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
-import com.google.maps.android.compose.currentCameraPositionState
-import pt.ist.cmu.chargist.viewmodel.connectionStatus
-import pt.ist.cmu.chargist.viewmodel.isUsingMobileData
-import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun HomeScreen(
@@ -189,7 +121,6 @@ fun HomeScreen(
     centerPoint: LatLng? = null
 ) {
     val chargers by appViewModel.allChargers.collectAsState()
-    val slots by appViewModel.allChargingSlots.collectAsState()
 
     val context = LocalContext.current
 
@@ -205,19 +136,18 @@ fun HomeScreen(
             ) {
                 // Ok can access location
                 mapViewModel.fetchUserLocation(context, fusedLocationClient)
-                mapViewModel.startLocationUpdates(context, fusedLocationClient)
+                mapViewModel.startLocationUpdates(fusedLocationClient)
 
             } else {
                 // ask for permission
                 context as MainActivity
-                val rationaleRequired =
-                    ActivityCompat.shouldShowRequestPermissionRationale(
-                        context,
-                        Manifest.permission.ACCESS_FINE_LOCATION )
-                            ||
-                    ActivityCompat.shouldShowRequestPermissionRationale(
-                        context,
-                        Manifest.permission.ACCESS_COARSE_LOCATION )
+                ActivityCompat.shouldShowRequestPermissionRationale(
+                    context,
+                    Manifest.permission.ACCESS_FINE_LOCATION )
+                        ||
+                ActivityCompat.shouldShowRequestPermissionRationale(
+                    context,
+                    Manifest.permission.ACCESS_COARSE_LOCATION )
             }
         }
     )
@@ -240,7 +170,7 @@ fun HomeScreen(
                 )
         }
     ) { paddingValues ->
-        Map(paddingValues, chargers, slots, userLocation, onCreateCharger, onCreateChargerByHoldingOnMap, onEditCharger, mapViewModel, appViewModel, centerPoint)
+        Map(paddingValues, chargers, userLocation, onCreateCharger, onCreateChargerByHoldingOnMap, onEditCharger, mapViewModel, appViewModel, centerPoint)
     }
 }
 
@@ -248,7 +178,6 @@ fun HomeScreen(
 fun Map(
     paddingValues: PaddingValues,
     chargers: List<Charger>,
-    slots: List<ChargingSlot>,
     userLocation: LatLng?,
     onCreateCharger: () -> Unit,
     onCreateChargerByHoldingOnMap: (LatLng) -> Unit,
@@ -396,21 +325,12 @@ fun SimpleMapMarker(
 
     val favourite = (favoriteChargers?.contains(charger.id) == true)
 
-    val imgUrl: String? = null
-
-    val painter = rememberAsyncImagePainter(
-        ImageRequest.Builder(LocalContext.current)
-            .data(imgUrl)
-            .allowHardware(false)
-            .build()
-    )
-
     if (mapViewModel.closeTo(charger)) {
         expandMarker = true
     }
 
     MarkerComposable(
-        keys = arrayOf(charger.name, painter.state, expandMarker),
+        keys = arrayOf(charger.name, expandMarker),
         state = markerState,
         title = charger.name,
         anchor = Offset(0.5f, 1f),
@@ -446,29 +366,17 @@ fun SimpleMapMarker(
                     Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (!imgUrl.isNullOrEmpty()) {
-                        Image(
-                            painter = painter,
-                            contentDescription = "Charger Image",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .weight(1f)
-                                .clip(RoundedCornerShape(16.dp)),
-                            contentScale = ContentScale.Fit
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(
-                                id = if (favourite) R.drawable.chargist_without_text_favourite else R.drawable.chargist_without_text
-                            ),
-                            contentDescription = "ChargIST Logo",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .weight(1f)
-                                .clip(RoundedCornerShape(16.dp)),
-                        )
-                    }
+                    Image(
+                        painter = painterResource(
+                            id = if (favourite) R.drawable.chargist_without_text_favourite else R.drawable.chargist_without_text
+                        ),
+                        contentDescription = "ChargIST Logo",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp)),
+                    )
                     Text(
                         text = charger.name,
                         style = MaterialTheme.typography.bodyMedium,
@@ -756,7 +664,6 @@ fun ChargerInformationPanel(
                 HorizontalDivider(Modifier.padding(14.dp), thickness = 1.dp)
 
                 RelevantNearbyServices(
-                    context,
                     mapViewModel,
                     charger!!.latitude,
                     charger!!.longitude
@@ -815,10 +722,11 @@ fun ChargerImage(
 
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    val connectedToMobileData = isUsingMobileData(context)
+    var connected = connectionStatus()
+    var connectedToMobileData = isUsingMobileData(context)
 
     LaunchedEffect(Unit) {
-        if (!connectedToMobileData) {
+        if (!connected && !connectedToMobileData) {
             val photoBytes = appViewModel.downloadChargerPhoto(charger.id)
             if (photoBytes != null) {
                 bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.size)
@@ -827,8 +735,19 @@ fun ChargerImage(
         isLoading = false
     }
 
+    var downloadPhotoWhileConnectedToData by remember { mutableStateOf(false) }
+
+    LaunchedEffect(downloadPhotoWhileConnectedToData) {
+        if (downloadPhotoWhileConnectedToData) {
+            val photoBytes = appViewModel.downloadChargerPhoto(charger.id)
+            if (photoBytes != null) {
+                bitmap = BitmapFactory.decodeByteArray(photoBytes, 0, photoBytes.size)
+            }
+        }
+    }
+
     // Charger Picture
-    if (isLoading) {
+    if (connected && isLoading) {
         Text(
             text="Loading...",
             textAlign = TextAlign.Center,
@@ -856,7 +775,10 @@ fun ChargerImage(
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp)),
+                .clip(RoundedCornerShape(16.dp))
+                .clickable {
+                    if (connectedToMobileData) downloadPhotoWhileConnectedToData = true
+                }
         )
     }
 }
@@ -1154,7 +1076,6 @@ fun RatingHistogram(ratings: Map<String, Double>) {
 
 @Composable
 fun RelevantNearbyServices(
-    context: Context,
     mapViewModel: MapViewModel,
     lat: Double,
     lng: Double
@@ -1162,20 +1083,32 @@ fun RelevantNearbyServices(
     val location = LatLng(lat, lng)
     val result = remember { mutableStateListOf<List<String>>() }
     val connected = connectionStatus()
-    var hasPolled = false
+    var hasPolled by remember { mutableStateOf(false) }
 
-    LaunchedEffect(connected) {
-        if (!hasPolled) {
-            result.addAll(mapViewModel.getNearbyServices(context, location) ?: listOf())
-            result.sortBy {it.getOrNull(3)?.toDoubleOrNull() ?: Double.MAX_VALUE} // sorts services by how close they are
-            hasPolled = true
+    var getNearbyServices by remember { mutableStateOf(false) }
+
+    LaunchedEffect(connected) { // waits for connection to be established as true
+        if (hasPolled) return@LaunchedEffect // makes sure that only polls once (more than that is unnecessary)
+        while (!getNearbyServices) { // waits for button to be clicked
+            delay(200)
         }
+        result.addAll(mapViewModel.getNearbyServices(location) ?: listOf())
+        result.sortBy { it.getOrNull(3)?.replace(",",".")?.toDoubleOrNull() ?: Double.MAX_VALUE } // sorts services by how close they are
+        hasPolled = true
     }
 
-    if (connected) {
-        Text("Nearby Services", fontSize = 32.sp)
-        Spacer(Modifier.size(20.dp))
+    Log.d("Services","hasPolled: $hasPolled")
 
+    Text("Nearby Services", fontSize = 32.sp)
+    Spacer(Modifier.size(10.dp))
+    if (!getNearbyServices && connected) {
+        TextButton(
+            onClick = {getNearbyServices = true},
+            colors = ButtonColors(Color.Transparent, mainColor, Color.Gray, colorScheme.primary)
+        ) {
+            Text("Get Nearby Services")}
+    }
+    if (hasPolled) {
         for (info in result) {
             Text(
                 info[0], // name of service
@@ -1208,7 +1141,7 @@ fun RelevantNearbyServices(
             HorizontalDivider(Modifier.padding(10.dp), thickness = 1.dp)
         }
     }
-    else {
+    else if (!connected) {
         Text("Connect to the internet to view services near this charger!", textAlign = TextAlign.Center)
     }
 }

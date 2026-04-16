@@ -1,11 +1,8 @@
 package pt.ist.cmu.chargist.viewmodel
 
-import android.R.attr.phoneNumber
 import android.app.Application
 import android.util.Log
-import android.util.Patterns
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -118,10 +115,10 @@ class RegisterViewModel (application: Application) : AndroidViewModel(applicatio
                         viewModelScope.launch {
                             userRepository.insert(user)
                         }
-                        Log.d("Firestore", "User created with ID: $uid")
+                        Log.d("RegisterViewModel", "User created with ID: $uid")
                     }
                     .addOnFailureListener { e ->
-                        Log.e("Firestore", "Error creating user", e)
+                        Log.e("RegisterViewModel", "Error creating user", e)
                     }
 
                 authRepository.signUp(email, password)
